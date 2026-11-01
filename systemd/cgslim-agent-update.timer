@@ -1,0 +1,9 @@
+[Unit]
+Description=cgslim-agent: controlla aggiornamenti ogni 10 minuti
+
+[Timer]
+OnBootSec=3min
+OnUnitActiveSec=10min
+
+[Install]
+WantedBy=timers.target

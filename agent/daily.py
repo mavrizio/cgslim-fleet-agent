@@ -25,7 +25,7 @@ EFFORT = "medium"
 PRICE_IN, PRICE_OUT = 4.0, 20.0           # $/MTok, claude-opus-5-5
 BATCH_POLL_S, BATCH_MAX_WAIT_S = 30, 3 * 3600
 WEEKLY_REVIEW_DAY = 0                      # lunedi': analisi anche senza novita'
-ISSUES_STATE = cfg.STATE_DIR / "issues.json"
+ISSUES_STATE = cfg.ROOT / "data" / "issues.json"  # nel repo: il registro non deve vivere solo sul server
 ISSUES_MD = cfg.ROOT / "ISSUES.md"
 DAILY_LOG = cfg.STATE_DIR / "daily_log.json"
 
@@ -383,6 +383,7 @@ def run(send: bool = True, force: bool = False) -> dict:
 
     cfg.STATE_DIR.mkdir(parents=True, exist_ok=True)
     cfg.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
+    ISSUES_STATE.parent.mkdir(parents=True, exist_ok=True)
     ISSUES_STATE.write_text(json.dumps(issues, ensure_ascii=False, indent=1), encoding="utf-8")
     ISSUES_MD.write_text(render_issues_md(issues), encoding="utf-8")
     (cfg.REPORTS_DIR / f"{today}.md").write_text(report, encoding="utf-8")

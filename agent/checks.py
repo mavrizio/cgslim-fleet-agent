@@ -7,7 +7,9 @@ Severita':
   warn  Telegram subito una volta, poi solo nel report giornaliero
   info  solo nel report giornaliero
 """
+import json
 import re
+import subprocess
 import zlib
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
@@ -188,6 +190,19 @@ def _group_widespread(found: list[Finding], min_devices: int = 3) -> list[Findin
 
 
 GROUPABLE = {"pos_error", "undervoltage_past", "gmi_flash_failed", "updater_failing", "app_down"}
+
+
+def check_server() -> list[Finding]:
+    """Salute del server di casa: Tailscale e' l'accesso da fuori (viaggi)."""
+    try:
+        out = subprocess.run(["tailscale", "status", "--json"], capture_output=True, text=True, timeout=15)
+        st = json.loads(out.stdout or "{}").get("BackendState", "?")
+    except (OSError, subprocess.TimeoutExpired, json.JSONDecodeError) as e:
+        st = f"errore: {e}"
+    if st == "Running":
+        return []
+    return [Finding("server_tailscale", "crit", "server", "Server di casa: Tailscale non collegato",
+                    f"stato {st}: da fuori casa il server non e' raggiungibile")]
 
 
 def production_only(devices: list[dict], events: list[dict]) -> tuple[list[dict], list[dict]]:

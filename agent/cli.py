@@ -32,7 +32,7 @@ def cmd_check(args) -> int:
         devices = db.devices(conn)
         events = db.events(conn, hours=6)
     devices, events = checks.production_only(devices, events)
-    findings = checks.run_all(devices, events, CHECK_WINDOW_H)
+    findings = checks.run_all(devices, events, CHECK_WINDOW_H) + checks.check_server()
     st = state.load()
     new, repeat, resolved = state.diff(st, findings)
 
@@ -90,11 +90,13 @@ def cmd_daily(args) -> int:
 
     usage = daily.run(send=not args.no_send, force=args.force)
     print(f"report fatto: {usage}")
-    # il registro va nel repo: e' cosi' che arriva allo sviluppo
+    # il registro va nel repo: e' cosi' che arriva allo sviluppo. Il server committa
+    # solo i dati; il codice arriva dal Mac, quindi rebase sui commit di GitHub
     git = ["git", "-C", str(ROOT)]
-    subprocess.run(git + ["add", "ISSUES.md", "reports"], check=True)
+    subprocess.run(git + ["add", "ISSUES.md", "reports", "data"], check=True)
     if subprocess.run(git + ["diff", "--cached", "--quiet"]).returncode:
         subprocess.run(git + ["commit", "-q", "-m", "Report giornaliero e registro problemi"], check=True)
+        subprocess.run(git + ["pull", "-q", "--rebase", "origin", "main"], check=True)
         subprocess.run(git + ["push", "-q", "origin", "main"], check=True)
     return 0
 

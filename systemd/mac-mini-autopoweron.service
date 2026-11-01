@@ -1,0 +1,11 @@
+[Unit]
+Description=Mac mini 2012: riaccensione automatica dopo un blackout (AFTERG3_EN=0 sul chipset HM77)
+
+[Service]
+Type=oneshot
+# GEN_PMCON_3 (0xa4) del controller LPC 00:1f.0: bit 0 = 0 -> si riaccende al ritorno della corrente.
+# Il firmware Apple puo' rimetterlo a 1 a ogni avvio, quindi lo si riscrive qui (solo il bit 0).
+ExecStart=/usr/bin/setpci -s 00:1f.0 0xa4.b=0:1
+
+[Install]
+WantedBy=multi-user.target

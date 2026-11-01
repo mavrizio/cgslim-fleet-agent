@@ -1,0 +1,11 @@
+[Unit]
+Description=cgslim-agent: aggiornamento da GitHub con prova e ritorno indietro
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openclaw
+WorkingDirectory=/opt/cgslim-agent
+ExecStart=/opt/cgslim-agent/scripts/update.sh
+TimeoutStartSec=15min

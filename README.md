@@ -15,6 +15,22 @@ lettura (migrazione `0010_fleet_agent_readonly.sql` del repo cgslim-fleet).
 
 Le macchine con MHD `7788…` e `7777…` (sviluppo/test) sono escluse.
 
+## Dove si lavora e come arriva al server
+- **Codice**: si modifica solo sul Mac (`~/Documents/GitHub/cgslim-fleet-agent`), commit e push su GitHub.
+- **Server**: `cgslim-agent-update.timer` ogni 10 min esegue `scripts/update.sh`: prende i commit nuovi,
+  aggiorna librerie e unit systemd, prova `agent.cli status`; se la prova fallisce torna al commit di
+  prima e lo scarta finche' non ne arriva uno nuovo. Esito su Telegram. Non serve raggiungere il server
+  (funziona anche senza Tailscale).
+- **Dati**: il server committa solo `ISSUES.md`, `reports/` e `data/issues.json` (registro), con rebase
+  sui commit del Mac. Prima di modificare il codice sul Mac: `git pull`.
+- `state/` (avvisi aperti, log dei report) resta solo sul server, fuori da git.
+
+## Server di casa (viaggi)
+- `mac-mini-autopoweron.service`: riaccensione automatica dopo un blackout.
+- I controlli ogni 15 min avvisano su Telegram se Tailscale si scollega.
+- Upgrade di versione di Ubuntu disattivati (`Prompt=never`): stamattina del 1/11 il passaggio a 26.04
+  aveva rotto i venv Python di 4 servizi.
+
 ## Comandi
 ```bash
 cd /opt/cgslim-agent
