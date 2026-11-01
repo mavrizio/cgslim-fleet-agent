@@ -43,13 +43,17 @@ def diff(state: dict, findings: list[Finding]) -> tuple[list[Finding], list[Find
     new, repeat = [], []
     for key, f in current.items():
         rec = open_.get(key)
-        if rec is None:
-            open_[key] = {"rule": f.rule, "severity": f.severity, "device_id": f.device_id,
-                          "title": f.title, "detail": f.detail, "first_seen": now.isoformat(),
-                          "last_seen": now.isoformat(), "last_sent": None}
-            if f.severity in ("crit", "warn"):
+        if rec is None or rec.get("last_sent") is None:
+            # mai avvisato: parte solo se e' grave e dura da almeno DEBOUNCE_MIN
+            if rec is None:
+                rec = open_[key] = {"rule": f.rule, "severity": f.severity, "device_id": f.device_id,
+                                    "first_seen": now.isoformat(), "last_sent": None}
+            rec.update(severity=f.severity, last_seen=now.isoformat(), title=f.title, detail=f.detail)
+            open_for = now - datetime.fromisoformat(rec["first_seen"])
+            if f.severity in ("crit", "warn") and \
+                    open_for >= timedelta(minutes=cfg.DEBOUNCE_MIN.get(f.rule, 0)):
                 new.append(f)
-                open_[key]["last_sent"] = now.isoformat()
+                rec["last_sent"] = now.isoformat()
             continue
         rec.update(last_seen=now.isoformat(), title=f.title, detail=f.detail)
         escalated = f.severity == "crit" and rec["severity"] != "crit"

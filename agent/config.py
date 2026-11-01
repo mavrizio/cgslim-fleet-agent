@@ -39,3 +39,5 @@ CPU_TEMP_WARN = 75.0
 DISK_FREE_WARN_MB = 1000
 CLOCK_SKEW_WARN_S = 120
 RENOTIFY_HOURS = 12          # un problema critico ancora aperto si ripete ogni 12 h
+# Minuti di persistenza prima del primo avviso, per gli stati che vanno e vengono
+DEBOUNCE_MIN = {"pos_error": 30, "runtime_stale": 15, "app_not_running": 15}
