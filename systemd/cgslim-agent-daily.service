@@ -8,4 +8,4 @@ Type=oneshot
 User=openclaw
 WorkingDirectory=/opt/cgslim-agent
 ExecStart=/opt/cgslim-agent/venv/bin/python -m agent.cli daily
-TimeoutStartSec=20min
+TimeoutStartSec=4h

@@ -1,12 +1,15 @@
-"""Livello 2: analisi giornaliera con Claude.
+"""Livello 2: report giornaliero.
 
-Raccoglie le ultime 24 h della flotta di produzione, le passa a Claude insieme
-alla scheda di conoscenza e al registro dei problemi, e riceve in JSON:
-riassunto Telegram, report email, registro aggiornato. Il registro diventa
-ISSUES.md nel repo: e' il canale verso lo sviluppo.
+Due parti:
+- lo script calcola numeri e tabelle (stato flotta, avvisi, pagamenti, eventi): gratis
+- Claude scrive solo l'analisi e le modifiche al registro dei problemi, e solo
+  nei giorni con novita' (piu' un giro di controllo settimanale). La richiesta
+  passa dalla Batch API (meta' prezzo); se fallisce si ripiega sulla chiamata diretta.
+Il registro diventa ISSUES.md nel repo: e' il canale verso lo sviluppo.
 """
 import json
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -18,9 +21,17 @@ from . import config as cfg
 
 ROME = ZoneInfo("Europe/Rome")
 MODEL = "claude-opus-5-5"
+EFFORT = "medium"
+PRICE_IN, PRICE_OUT = 4.0, 20.0           # $/MTok, claude-opus-5-5
+BATCH_POLL_S, BATCH_MAX_WAIT_S = 30, 3 * 3600
+WEEKLY_REVIEW_DAY = 0                      # lunedi': analisi anche senza novita'
 ISSUES_STATE = cfg.STATE_DIR / "issues.json"
 ISSUES_MD = cfg.ROOT / "ISSUES.md"
 DAILY_LOG = cfg.STATE_DIR / "daily_log.json"
+
+# Eventi che da soli giustificano l'analisi (reboot e cambi versione sono la normalita')
+NOTABLE_EVENTS = {"exception", "app_down", "serial_missing", "serial_recovery_exhausted",
+                  "gmi_flash_failed", "update_failed", "device_key_enrolled", "first_seen"}
 
 SYSTEM = """Sei l'analista tecnico della flotta CGSLIM (cambiamonete nei centri commerciali).
 Ogni giorno ricevi lo stato delle macchine di produzione e gli eventi delle ultime 24 ore.
@@ -33,16 +44,18 @@ Il tuo lavoro:
 2. Collegare i sintomi ai problemi gia' noti (scheda di conoscenza) e al registro esistente.
    Non presentare come scoperta un problema noto: aggiorna la voce del registro.
 3. Tenere il registro dei problemi per lo sviluppo: una voce per causa, non per macchina.
-   Mantieni gli id esistenti; per le voci nuove usa gli id a partire da quello indicato.
-   Chiudi (resolved) una voce solo se i dati mostrano che il problema e' sparito da giorni;
-   "monitoring" se non si e' ripresentato oggi ma e' troppo presto per chiuderla.
+   Restituisci SOLO le voci nuove o cambiate (stato, macchine, prove, ipotesi, proposta),
+   complete in tutti i campi; le voci che restituisci sostituiscono quelle con lo stesso id.
+   Per le voci nuove usa gli id a partire da quello indicato. Chiudi (resolved) una voce solo
+   se i dati mostrano che il problema e' sparito; "monitoring" se oggi non si e' ripresentato
+   ma e' presto per chiuderla.
 4. Distinguere fatti e ipotesi. Ogni affermazione sulle macchine deve venire dai dati forniti;
    cita MHD (senza zeri iniziali), orari e numeri. Se un dato manca, dillo.
 
-Stile del report email (markdown): parti da 3-5 righe "In breve", poi sezioni brevi:
-Da fare oggi (azioni concrete, chi le fa), Problemi aperti, Novita' rispetto a ieri,
-Stato flotta (numeri). Niente frasi di cortesia, niente ripetizioni del registro intero.
-Il riassunto Telegram: massimo 6 righe di testo semplice, la prima con il conteggio online."""
+I numeri (stato flotta, versioni, pagamenti, conteggio eventi) li mette gia' lo script nel
+report: non ripeterli. La tua parte del report (markdown) ha solo tre sezioni brevi:
+"In breve" (3-5 righe), "Da fare oggi" (azioni concrete, chi le fa), "Novita' rispetto a ieri".
+Il riassunto Telegram: massimo 5 righe di testo semplice, la prima con il conteggio online."""
 
 ISSUE_SCHEMA = {
     "type": "object",
@@ -68,10 +81,10 @@ OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
         "telegram_summary": {"type": "string"},
-        "report_markdown": {"type": "string"},
-        "issues": {"type": "array", "items": ISSUE_SCHEMA},
+        "analysis_markdown": {"type": "string"},
+        "issue_updates": {"type": "array", "items": ISSUE_SCHEMA},
     },
-    "required": ["telegram_summary", "report_markdown", "issues"],
+    "required": ["telegram_summary", "analysis_markdown", "issue_updates"],
     "additionalProperties": False,
 }
 
@@ -83,9 +96,18 @@ def _load_json(path, default):
         return default
 
 
-def _ts(dt) -> str:
+def _ts(dt) -> str | None:
     return dt.astimezone(ROME).strftime("%d/%m %H:%M") if dt else None
 
+
+def _count(values) -> dict:
+    out = {}
+    for v in values:
+        out[v or "?"] = out.get(v or "?", 0) + 1
+    return dict(sorted(out.items(), key=lambda kv: -kv[1]))
+
+
+# --- raccolta dati ------------------------------------------------------------
 
 def _device_view(d: dict) -> dict:
     """Solo i campi utili all'analisi: il payload completo pesa troppo."""
@@ -155,17 +177,16 @@ def build_context() -> tuple[dict, list[dict]]:
     alerts = state.load()
     issues = _load_json(ISSUES_STATE, [])
     nums = [int(m.group(1)) for i in issues if (m := re.match(r"CG-(\d+)", i.get("id", "")))]
-    now = datetime.now(ROME)
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     ctx = {
-        "now": now.strftime("%Y-%m-%d %H:%M %A"),
+        "now": datetime.now(ROME).strftime("%Y-%m-%d %H:%M %A"),
         "fleet": {"machines": len(devices),
                   "online": sum(1 for d in devices if d["age_s"] < 35 * 60),
                   "app_versions": _count(d.get("app_version") for d in devices),
                   "fw_versions": _count(d.get("fw_version") for d in devices),
                   "branches": _count(d.get("git_branch") for d in devices)},
         "level1_open_alerts": list(alerts.get("open", {}).values()),
-        "level1_resolved_24h": [h for h in alerts.get("history", [])
-                                if h.get("resolved_at", "") > (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()],
+        "level1_resolved_24h": [h for h in alerts.get("history", []) if h.get("resolved_at", "") > since],
         "devices": [_device_view(d) for d in devices],
         "events_24h": [_event_view(e, names) for e in events],
         "transactions_24h_by_machine": _trx_summary(trx),
@@ -176,54 +197,140 @@ def build_context() -> tuple[dict, list[dict]]:
     return ctx, issues
 
 
-def _count(values) -> dict:
-    out = {}
-    for v in values:
-        out[v or "?"] = out.get(v or "?", 0) + 1
-    return dict(sorted(out.items(), key=lambda kv: -kv[1]))
+# --- parte calcolata dallo script ------------------------------------------------
+
+def scripted_report(ctx: dict, issues: list[dict]) -> str:
+    f = ctx["fleet"]
+    fmt = lambda counts: ", ".join(f"{k} ×{v}" for k, v in counts.items())
+    offline = [d for d in ctx["devices"] if d["offline_min"]]
+    out = ["## Stato flotta", "",
+           f"- **Macchine:** {f['machines']}, online {f['online']}"
+           + (f" · offline: {', '.join(d['mhd'] + ' (dal ' + d['last_seen'] + ')' for d in offline)}" if offline else ""),
+           f"- **App:** {fmt(f['app_versions'])}",
+           f"- **Firmware:** {fmt(f['fw_versions'])}",
+           f"- **Branch:** {fmt(f['branches'])}", ""]
+
+    alerts = sorted(ctx["level1_open_alerts"], key=lambda a: checks.SEVERITY_ORDER.get(a["severity"], 9))
+    if alerts:
+        icon = {"crit": "🔴", "warn": "🟠", "info": "⚪"}
+        out += ["## Avvisi aperti (controlli ogni 15 min)", ""]
+        out += [f"- {icon.get(a['severity'], '')} {a['title']}" + (f" — {a['detail']}" if a.get("detail") else "")
+                for a in alerts]
+        out.append("")
+
+    trx = ctx["transactions_24h_by_machine"]
+    if trx:
+        tot = _count(o for t in trx for o, n in t["outcomes"].items() for _ in range(n))
+        meth = _count(m for t in trx for m, n in t["methods"].items() for _ in range(n))
+        out += ["## Pagamenti ultime 24 h", "",
+                f"Totale {sum(t['n'] for t in trx)} · esiti: {fmt(tot)} · metodi: {fmt(meth)}", "",
+                "| MHD | Op. | Esiti | Metodi | Ultima approvata |", "|---|---|---|---|---|"]
+        out += [f"| {t['mhd']} | {t['n']} | {fmt(t['outcomes'])} | {fmt(t['methods'])} | {t['last_approved'] or '—'} |"
+                for t in trx]
+        out.append("")
+
+    ev = ctx["events_24h"]
+    if ev:
+        kinds = _count(e["kind"] for e in ev)
+        out += ["## Eventi ultime 24 h", "", fmt(kinds), ""]
+
+    open_issues = [i for i in issues if i["status"] != "resolved"]
+    if open_issues:
+        out += ["## Registro problemi", ""]
+        out += [f"- **{i['id']}** ({i['status']}, {i['severity']}, {i['area']}) {i['title']}" for i in open_issues]
+        out.append("")
+    return "\n".join(out)
+
+
+def notable_reasons(ctx: dict, issues: list[dict]) -> list[str]:
+    """Motivi per scomodare Claude oggi. Vuoto = giornata tranquilla."""
+    since = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+    reasons = []
+    if not issues:
+        reasons.append("registro vuoto")
+    new_alerts = [a for a in ctx["level1_open_alerts"]
+                  if a.get("first_seen", "") > since and a["severity"] in ("crit", "warn")]
+    if new_alerts:
+        reasons.append(f"{len(new_alerts)} avvisi nuovi")
+    if ctx["level1_resolved_24h"]:
+        reasons.append(f"{len(ctx['level1_resolved_24h'])} avvisi chiusi")
+    ev = _count(e["kind"] for e in ctx["events_24h"] if e["kind"] in NOTABLE_EVENTS)
+    if ev:
+        reasons.append("eventi: " + ", ".join(f"{k} ×{v}" for k, v in ev.items()))
+    if datetime.now(ROME).weekday() == WEEKLY_REVIEW_DAY:
+        reasons.append("revisione settimanale")
+    return reasons
+
+
+# --- parte di Claude ------------------------------------------------------------
+
+def _request_params(ctx: dict, issues: list[dict]) -> dict:
+    knowledge = (cfg.KNOWLEDGE_DIR / "KNOWLEDGE.md").read_text(encoding="utf-8")
+    return {
+        "model": MODEL,
+        "max_tokens": 32000,
+        "thinking": {"type": "adaptive"},
+        "output_config": {"effort": EFFORT, "format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
+        "system": [{"type": "text", "text": SYSTEM},
+                   {"type": "text", "text": "# Scheda di conoscenza\n\n" + knowledge}],
+        "messages": [{"role": "user", "content": [
+            {"type": "text", "text": "# Registro dei problemi attuale\n\n"
+             + json.dumps(issues, ensure_ascii=False, indent=1)},
+            {"type": "text", "text": "# Dati di oggi\n\n" + json.dumps(ctx, ensure_ascii=False, default=str)},
+            {"type": "text", "text": "Analizza i dati di oggi: riassunto Telegram, la tua parte del report "
+             "e le sole voci del registro nuove o cambiate."},
+        ]}],
+    }
+
+
+def _parse(msg) -> dict:
+    if msg.stop_reason == "refusal":
+        raise RuntimeError(f"rifiuto: {getattr(msg, 'stop_details', None)}")
+    if msg.stop_reason == "max_tokens":
+        raise RuntimeError("risposta troncata (max_tokens)")
+    return json.loads(next(b.text for b in msg.content if b.type == "text"))
+
+
+def _usage(msg, discount: float) -> dict:
+    u = msg.usage
+    cost = (u.input_tokens * PRICE_IN + u.output_tokens * PRICE_OUT) / 1e6 * discount
+    return {"input": u.input_tokens, "output": u.output_tokens, "cost_usd": round(cost, 3)}
 
 
 def analyze(ctx: dict, issues: list[dict]) -> tuple[dict, dict]:
-    knowledge = (cfg.KNOWLEDGE_DIR / "KNOWLEDGE.md").read_text(encoding="utf-8")
     client = anthropic.Anthropic()
-    with client.beta.messages.stream(
-        model=MODEL,
-        max_tokens=64000,
-        betas=["server-side-fallback-2026-07-01"],
-        fallbacks="default",
-        thinking={"type": "adaptive"},
-        output_config={"effort": "high", "format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
-        # parte fissa prima (scheda di conoscenza), dati del giorno dopo
-        system=[{"type": "text", "text": SYSTEM},
-                {"type": "text", "text": "# Scheda di conoscenza\n\n" + knowledge,
-                 "cache_control": {"type": "ephemeral"}}],
-        messages=[{"role": "user", "content": [
-            {"type": "text", "text": "# Registro dei problemi attuale\n\n"
-             + json.dumps(issues, ensure_ascii=False, indent=1)},
-            {"type": "text", "text": "# Dati di oggi\n\n"
-             + json.dumps(ctx, ensure_ascii=False, default=str)},
-            {"type": "text", "text": "Analizza i dati di oggi e restituisci riassunto Telegram, "
-             "report email e registro dei problemi aggiornato e completo (tutte le voci, "
-             "anche quelle invariate)."},
-        ]}],
-    ) as stream:
+    params = _request_params(ctx, issues)
+    try:
+        batch = client.messages.batches.create(requests=[{"custom_id": "daily", "params": params}])
+        deadline = time.monotonic() + BATCH_MAX_WAIT_S
+        while batch.processing_status != "ended":
+            if time.monotonic() > deadline:
+                client.messages.batches.cancel(batch.id)
+                raise TimeoutError(f"batch {batch.id} non finito in {BATCH_MAX_WAIT_S // 3600} h")
+            time.sleep(BATCH_POLL_S)
+            batch = client.messages.batches.retrieve(batch.id)
+        result = next(iter(client.messages.batches.results(batch.id))).result
+        if result.type != "succeeded":
+            raise RuntimeError(f"batch {result.type}")
+        msg = result.message
+        out = _parse(msg)
+        return out, _usage(msg, 0.5) | {"mode": "batch"}
+    except Exception as e:  # ripiego: chiamata diretta, con fallback lato server sui rifiuti
+        print(f"batch fallito ({e}), chiamata diretta")
+    with client.beta.messages.stream(**params, betas=["server-side-fallback-2026-07-01"],
+                                     fallbacks="default") as stream:
         msg = stream.get_final_message()
-    if msg.stop_reason == "refusal":
-        raise RuntimeError(f"Claude ha rifiutato la richiesta: {msg.stop_details}")
-    if msg.stop_reason == "max_tokens":
-        raise RuntimeError("Risposta troncata (max_tokens)")
-    text = next(b.text for b in msg.content if b.type == "text")
-    u = msg.usage
-    usage = {"input": u.input_tokens, "output": u.output_tokens,
-             "cache_read": getattr(u, "cache_read_input_tokens", 0) or 0,
-             "cache_write": getattr(u, "cache_creation_input_tokens", 0) or 0}
-    usage["cost_usd"] = round((usage["input"] * 4 + usage["cache_write"] * 5 + usage["cache_read"] * 0.2
-                               + usage["output"] * 20) / 1e6, 3)
-    return json.loads(text), usage
+    return _parse(msg), _usage(msg, 1.0) | {"mode": "direct"}
+
+
+def merge_issues(issues: list[dict], updates: list[dict]) -> list[dict]:
+    by_id = {i["id"]: i for i in issues}
+    for u in updates:
+        by_id[u["id"]] = u
+    return sorted(by_id.values(), key=lambda i: i["id"])
 
 
 def render_issues_md(issues: list[dict]) -> str:
-    order = {"open": 0, "monitoring": 1, "resolved": 2}
     sev = {"high": 0, "medium": 1, "low": 2}
     lines = ["# Registro problemi flotta CGSLIM", "",
              f"Aggiornato dall'agente il {datetime.now(ROME):%d/%m/%Y %H:%M}. "
@@ -248,29 +355,46 @@ def render_issues_md(issues: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def run(send: bool = True) -> dict:
+# --- giro completo ---------------------------------------------------------------
+
+def run(send: bool = True, force: bool = False) -> dict:
     from . import notify
 
     ctx, issues = build_context()
-    result, usage = analyze(ctx, issues)
     today = datetime.now(ROME).strftime("%Y-%m-%d")
+    reasons = notable_reasons(ctx, issues)
+
+    if reasons or force:
+        result, usage = analyze(ctx, issues)
+        issues = merge_issues(issues, result["issue_updates"])
+        analysis, summary = result["analysis_markdown"], result["telegram_summary"]
+        footer = (f"_Analisi {MODEL} ({usage['mode']}, effort {EFFORT}) per: {'; '.join(reasons) or 'richiesta'}"
+                  f" · {len(result['issue_updates'])} voci aggiornate · costo stimato {usage['cost_usd']} $_")
+    else:
+        usage = {"mode": "skipped", "cost_usd": 0}
+        f = ctx["fleet"]
+        summary = (f"{f['online']}/{f['machines']} online. Nessuna novita' nelle ultime 24 h: "
+                   "analisi saltata, solo report calcolato.")
+        analysis = "## In breve\n\nNessuna novita' nelle ultime 24 h: nessun avviso nuovo, nessun evento anomalo."
+        footer = "_Analisi saltata (giornata tranquilla), costo 0 $_"
+
+    report = (f"# Report flotta CGSLIM · {datetime.now(ROME):%d/%m/%Y}\n\n{analysis}\n\n"
+              f"{scripted_report(ctx, issues)}\n---\n{footer}\n")
 
     cfg.STATE_DIR.mkdir(parents=True, exist_ok=True)
     cfg.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
-    ISSUES_STATE.write_text(json.dumps(result["issues"], ensure_ascii=False, indent=1), encoding="utf-8")
-    ISSUES_MD.write_text(render_issues_md(result["issues"]), encoding="utf-8")
-    report = result["report_markdown"] + f"\n\n---\n_Analisi {MODEL}, costo stimato {usage['cost_usd']} $_\n"
+    ISSUES_STATE.write_text(json.dumps(issues, ensure_ascii=False, indent=1), encoding="utf-8")
+    ISSUES_MD.write_text(render_issues_md(issues), encoding="utf-8")
     (cfg.REPORTS_DIR / f"{today}.md").write_text(report, encoding="utf-8")
     log = _load_json(DAILY_LOG, [])
-    log.append({"date": today, "summary": result["telegram_summary"], "usage": usage})
+    log.append({"date": today, "summary": summary, "reasons": reasons, "usage": usage})
     DAILY_LOG.write_text(json.dumps(log[-30:], ensure_ascii=False, indent=1), encoding="utf-8")
 
     if send:
-        n_open = sum(1 for i in result["issues"] if i["status"] == "open")
+        n_open = sum(1 for i in issues if i["status"] == "open")
         notify.email(f"[CGSLIM Flotta] Report {datetime.now(ROME):%d/%m} · {n_open} problemi aperti",
                      report, _html(report))
-        notify.telegram("📋 <b>Report flotta</b>\n" + notify.esc(result["telegram_summary"])
-                        + "\n\n<i>Dettagli via email</i>")
+        notify.telegram("📋 <b>Report flotta</b>\n" + notify.esc(summary) + "\n\n<i>Dettagli via email</i>")
     return usage
 
 

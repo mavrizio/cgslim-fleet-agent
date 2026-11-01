@@ -1,6 +1,6 @@
 # Registro problemi flotta CGSLIM
 
-Aggiornato dall'agente il 01/11/2026 11:44. Una voce per causa; MHD senza zeri. Generato: non modificare a mano.
+Aggiornato dall'agente il 01/11/2026 12:13. Una voce per causa; MHD senza zeri. Generato: non modificare a mano.
 
 ## Aperti
 
@@ -8,9 +8,9 @@ Aggiornato dall'agente il 01/11/2026 11:44. Una voce per causa; MHD senza zeri. 
 
 - **Area:** firmware · **Gravita':** high · **Visto:** 2026-10-30 → 2026-11-01
 - **Macchine:** 33326, 26087, 29597
-- **Prove:** 33326 (beta2, centro non registrato): gmi_blocked dal 01/11 09:36, 15 tentativi con CGT-4.20.84.bin, 'Timeout ACK al blocco 7808. STM32 non ha risposto.' Gia' dal 30/10 14:55 il flash di CGT-4.20.83.bin era fallito (15 tentativi, blocco 44544; evento ricevuto il 31/10 18:40). 01/11 09:24: eccezione 'RILEVATO LOOP BOOTLOADER (RDY)' (buffer YRDYRDY) e app_down. Payload attuale: mod 0, screen 29, hopper null, contatori GMI null, fw riportato 4.20.82 (non aggiornato). Pi 3 Model B Rev 1.2, throttled 0x50000; l'alert delle 11:31 indica 0x50005 (sottotensione adesso). Uptime 171176 s: non viene spenta la notte. Loop RDY anche su 26087 (10:31, fw 4.20.84 ok alle 10:36) e su 29597 (10:55, fw 4.20.84 ok alle 10:57), rientrati senza intervento.
-- **Ipotesi:** Problema noto del bootloader V2. Su 33326 il flash fallisce da due giorni a blocchi diversi (44544, poi 7808): questo fa pensare a disturbi di linea o di alimentazione piu' che a un file corrotto. La sottotensione del Pi durante il flash e' un sospetto concreto. Non si sa se la GMI sia verde (col modem): i contatori GMI non sono disponibili. Su 26087 e 29597 la GMI e' rimasta nel bootloader durante l'aggiornamento ed e' stata recuperata dal flash successivo.
-- **Proposta:** Campo: spegnere e riaccendere GMI e Pi su 33326 per uscire dall'errore 98, cambiare o misurare l'alimentatore del Pi e annotare il colore della GMI. Se fallisce ancora, flash manuale con ST-Link. Pi/firmware: registrare throttled e il blocco al momento del Timeout ACK; valutare di rimandare il flash se il bit 0x1 (sottotensione in corso) e' attivo.
+- **Prove:** 33326 (beta2, centro non registrato), ultimo report 12:09: gmi_blocked ancora attivo, dal 01/11 09:36, 15 tentativi con CGT-4.20.84.bin, 'Timeout ACK al blocco 7808'. Gia' il 30/10 il flash di CGT-4.20.83.bin era fallito al blocco 44544 (evento ricevuto il 31/10 18:40). 09:24: 'RILEVATO LOOP BOOTLOADER (RDY)' (buffer YRDYRDY) e app_down. Payload: mod 0, screen 29, hopper null, contatori GMI null, fw riportato 4.20.82. Pi 3 Model B Rev 1.2; ora il payload riporta throttled 0x50005 (sottotensione in corso). Uptime 173003 s: la macchina non viene spenta la notte. Loop RDY anche su 26087 (10:31, fw 4.20.84 ok alle 10:36) e su 29597 (10:55, ok alle 10:57), rientrati da soli.
+- **Ipotesi:** Problema noto del bootloader V2. Su 33326 il flash fallisce a blocchi diversi (44544, poi 7808), quindi la causa e' piu' probabilmente un disturbo di linea o di alimentazione che un file corrotto. La sottotensione intermittente del Pi, confermata ora nel payload, e' il sospetto principale. Il colore della GMI non e' noto.
+- **Proposta:** Campo: sostituire prima l'alimentatore del Pi di 33326, poi spegnere e riaccendere GMI e Pi per uscire dall'errore 98. Annotare il colore della GMI. Se fallisce ancora, flash manuale con ST-Link. Pi: rimandare il flash GMI se il bit 0x1 di throttled e' attivo; registrare throttled e il numero di blocco al momento del Timeout ACK.
 - **Gia' noto:** Aggiornamento firmware GMI che fallisce (gmi_flash_failed, gmi_blocked, loop RDY)
 
 ### CG-002 · 36842 offline dal 31/10 20:21 e non riaccesa al mattino
@@ -25,9 +25,9 @@ Aggiornato dall'agente il 01/11/2026 11:44. Una voce per causa; MHD senza zeri. 
 
 - **Area:** pi · **Gravita':** high · **Visto:** 2026-10-31 → 2026-11-01
 - **Macchine:** 24254, 24866, 26087, 29597, 29598, 24350, 37008, 36842, 24349
-- **Prove:** 7 macchine online hanno pos.state DISCONNECTED (connected false) e p95_error 'Timeout locale in attesa di get_advanced_config (15.0s)': 24254, 24866, 26087, 29597, 29598 (tutte e 5 di Aprilia), 24350 (Parma) e 37008 (beta2). Lo stesso errore c'e' nell'ultimo payload di 36842 (offline). Le altre 11 online sono IDLE e connesse, con identita' P95 letta. 24349: alert 'Connessione persa durante get_advanced_config: Connessione chiusa dal dispositivo', ma il payload attuale e' IDLE e connesso, con lettura alle 11:28. Il 31/10 i POS di Aprilia rispondevano: 29598 con 3 tentativi carta (timeout 18:02, 2 annullati), 24254 con un timeout del cliente alle 18:41. Oggi nessuna transazione carta su tutta la flotta (domenica mattina).
-- **Ipotesi:** Problema noto della lettura cashless_info (v.171+), qui con un effetto piu' grave: dopo il timeout all'avvio il pos-engine resta DISCONNECTED. Se e' cosi', le 7 macchine non accettano carte. Il fatto che tutte le macchine di Aprilia siano colpite fa pensare anche a POS spenti o irraggiungibili nella rete locale del centro. Da verificare.
-- **Proposta:** Maurizio: leggere i log di pos-engine su 26087 e 24350 (connessione TCP al 192.168.9.170, chi la chiude, eventuali retry). Se il pos-engine non si riconnette dopo il timeout di get_advanced_config, correggere core/cashless_info.py: retry con backoff, lettura che non abbatte la connessione, nessun blocco dei pagamenti. Campo Aprilia: prova di pagamento con carta su 26087 e controllo che il SELF2000 sia acceso.
+- **Prove:** Alle 12:11 sono ancora pos.state DISCONNECTED con p95_error 'Timeout locale in attesa di get_advanced_config (15.0s)': 24254, 24866, 26087, 29597, 29598 (tutte e 5 di Aprilia), 24350 (Parma) e 37008 (beta2). Stesso errore nell'ultimo payload di 36842 (offline). Le altre online sono IDLE e connesse. 24349: alert 'Connessione persa durante get_advanced_config' aperto alle 11:31 e chiuso alle 11:47; ora IDLE e connesso. Novita': 24254 ha un tentativo card_p95 alle 11:50 chiuso come 'cancelled' (oltre al timeout cliente del 31/10 18:41), con il POS riportato DISCONNECTED alle 12:10. E' l'unico tentativo carta di oggi sulla flotta. Nessun pagamento carta approvato oggi.
+- **Ipotesi:** Problema noto della lettura cashless_info (v.171+), con effetto piu' grave del previsto: dopo il timeout all'avvio il pos-engine resta DISCONNECTED. Il 'cancelled' di 24254 puo' essere un annullamento del cliente oppure un tentativo abortito perche' il POS non era collegato: dai dati non si distingue. Che siano colpite tutte le macchine di Aprilia fa pensare anche a POS spenti o irraggiungibili in quel centro.
+- **Proposta:** Maurizio: log di pos-engine su 24254 intorno alle 11:50 (la transazione e' partita? chi l'ha annullata?) e su 26087/24350 per verificare i retry dopo il timeout. Se manca la riconnessione, correggere core/cashless_info.py: retry con backoff, lettura che non abbatte la connessione, nessun blocco dei pagamenti. Campo Aprilia: prova con carta reale su 24254 o 26087 e controllo che il SELF2000 sia acceso.
 - **Gia' noto:** POS: get_advanced_config
 
 ### CG-004 · Seriale GMI assente all'accensione (FTDI non enumerato), cavi lotto BG03E
@@ -43,9 +43,9 @@ Aggiornato dall'agente il 01/11/2026 11:44. Una voce per causa; MHD senza zeri. 
 
 - **Area:** hardware · **Gravita':** medium · **Visto:** 2026-11-01 → 2026-11-01
 - **Macchine:** 24254, 24338, 24349, 24350, 26087, 33326, 36842
-- **Prove:** throttled 0x50000 (sottotensione avvenuta dal boot) su 24254, 24338, 24349, 24350, 26087 e 33326. 0x50005 (sottotensione in corso) nell'ultimo payload di 36842 (31/10 20:21). L'alert undervoltage_now (0x50005) delle 11:31 e' attribuito al device di 33326, ma il payload attuale di 33326 riporta 0x50000. Tutte le altre macchine sono a 0x0.
-- **Ipotesi:** Alimentatori o cavi deboli. Le due macchine piu' gravi di oggi, 33326 (flash fallito) e 36842 (offline), sono anche quelle con sottotensione in corso. L'attribuzione dell'alert potrebbe essere errata lato dashboard.
-- **Proposta:** Hardware/campo: sostituire per primi gli alimentatori di 36842 e 33326, poi verificare a giro 24349, 24350, 24254 e 26087. Dashboard: controllare a quale device appartiene l'alert 0x50005.
+- **Prove:** throttled 0x50000 (sottotensione avvenuta dal boot) su 24254, 24338, 24349, 24350 e 26087. 33326: ora 0x50005 anche nel payload delle 12:09. Il suo alert undervoltage_now si e' aperto alle 11:31, chiuso alle 11:47 e riaperto alle 12:02: la sottotensione e' intermittente. 36842: 0x50005 nell'ultimo payload (31/10 20:21). Tutte le altre sono a 0x0.
+- **Ipotesi:** Alimentatori o cavi deboli. L'attribuzione dell'alert a 33326 era corretta. Le due macchine piu' gravi (33326 con il flash fallito, 36842 offline) sono le uniche con sottotensione in corso.
+- **Proposta:** Hardware/campo: sostituire subito gli alimentatori di 33326 e 36842, poi verificare a giro 24349, 24350, 24254, 26087 e 24338.
 - **Gia' noto:** host.throttled 0x50000 (scheda campi); sottotensione sospettata nei flash GMI falliti
 
 ### CG-006 · TID POS anomali: 36842 senza TID, 24338 e 33326 con TID duplicato
@@ -61,9 +61,9 @@ Aggiornato dall'agente il 01/11/2026 11:44. Una voce per causa; MHD senza zeri. 
 
 - **Area:** campo · **Gravita':** medium · **Visto:** 2026-11-01 → 2026-11-01
 - **Macchine:** 25158
-- **Prove:** Payload delle 11:30: hopper ['0','0','0'] (le altre Parma MOD12 hanno ['1','0','0']), screen 73 (le altre 71), idle. Ultima vendita 31/10 alle 23:38; nessuna dopo l'avvio delle 09:22. Le vicine vendono: 24350 ultima alle 10:56, 32996 alle 11:36. Stamattina e' passata dal recupero seriale (CG-004).
-- **Ipotesi:** Tramoggia 1 vuota o in errore, oppure stato della GMI non ripristinato dopo il recupero seriale e il flash a 4.20.84. Il significato della schermata 73 non e' nella scheda.
-- **Proposta:** Campo Parma: verificare tramoggia e schermata della 25158 nella stessa visita della 36842. Maurizio: chiarire cosa indica screen 73.
+- **Prove:** Payload delle 12:00: hopper ['0','0','0'] (le altre Parma MOD12 hanno ['1','0','0']), screen 73 (le altre 71), idle. Ultima vendita 31/10 alle 23:38; nessuna nelle 2,5 ore dall'avvio delle 09:22. Le vicine vendono: 24350 fino alle 12:06, 32995 alle 12:06, 32996 alle 12:09. POS IDLE e connesso. Stamattina e' passata dal recupero seriale (CG-004) e dal flash a 4.20.84 (09:30).
+- **Ipotesi:** Tramoggia 1 vuota o in errore, oppure stato della GMI non ripristinato dopo il recupero seriale e il flash. Il significato della schermata 73 non e' nella scheda.
+- **Proposta:** Campo Parma: verificare tramoggia e schermata della 25158 nella visita per la 36842; se serve, spegnere e riaccendere GMI e Pi. Maurizio: chiarire cosa indica screen 73.
 
 ### CG-008 · Branch riportato 'parma' ma servizio gitpuller@beta su 3 macchine Aprilia
 

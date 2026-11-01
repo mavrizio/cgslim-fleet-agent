@@ -3,7 +3,7 @@
   python -m agent.cli check [--dry-run]   livello 1, ogni 15 min (timer systemd)
   python -m agent.cli status              stampa i problemi aperti adesso, senza inviare
   python -m agent.cli telegram-chat-id    legge il chat_id dopo /start al bot
-  python -m agent.cli daily [--no-send]   livello 2, report giornaliero con Claude (timer 10:00)
+  python -m agent.cli daily [--no-send] [--force]  livello 2, report giornaliero con Claude (timer 10:00)
 """
 import argparse
 import json
@@ -88,7 +88,7 @@ def cmd_daily(args) -> int:
     from . import daily
     from .config import ROOT
 
-    usage = daily.run(send=not args.no_send)
+    usage = daily.run(send=not args.no_send, force=args.force)
     print(f"report fatto: {usage}")
     # il registro va nel repo: e' cosi' che arriva allo sviluppo
     git = ["git", "-C", str(ROOT)]
@@ -109,6 +109,7 @@ def main() -> int:
     sub.add_parser("telegram-chat-id").set_defaults(fn=cmd_chat_id)
     d = sub.add_parser("daily")
     d.add_argument("--no-send", action="store_true", help="scrive report e registro senza inviarli")
+    d.add_argument("--force", action="store_true", help="analisi con Claude anche senza novita'")
     d.set_defaults(fn=cmd_daily)
     args = p.parse_args()
     return args.fn(args)
