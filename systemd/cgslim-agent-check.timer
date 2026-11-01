@@ -1,0 +1,10 @@
+[Unit]
+Description=cgslim-agent livello 1 ogni 15 minuti
+
+[Timer]
+OnBootSec=5min
+OnCalendar=*:2/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target

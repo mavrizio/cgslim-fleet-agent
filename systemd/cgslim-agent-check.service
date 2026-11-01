@@ -1,0 +1,11 @@
+[Unit]
+Description=cgslim-agent livello 1: controllo flotta a regole
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openclaw
+WorkingDirectory=/opt/cgslim-agent
+ExecStart=/opt/cgslim-agent/venv/bin/python -m agent.cli check
+TimeoutStartSec=3min
