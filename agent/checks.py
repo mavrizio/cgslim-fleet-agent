@@ -220,3 +220,4 @@ def run_all(devices, events, window_h: float) -> list[Finding]:
         if f.key not in best or SEVERITY_ORDER[f.severity] < SEVERITY_ORDER[best[f.key].severity]:
             best[f.key] = f
     return sorted(best.values(), key=lambda f: (SEVERITY_ORDER[f.severity], f.title))
+def rotto(:
