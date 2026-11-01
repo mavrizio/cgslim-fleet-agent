@@ -23,7 +23,7 @@ def devices(conn) -> list[dict]:
     return conn.execute(
         """
         select d.device_id, d.mhd, d.hostname, d.label, d.location, d.app_version,
-               d.fw_version, d.git_branch, d.app_running, d.last_seen, d.last_reason,
+               d.fw_version, d.git_branch, d.git_commit, d.app_running, d.last_seen, d.last_reason,
                d.status, d.device_key_status, d.config_key_status,
                extract(epoch from now() - d.last_seen)::int as age_s,
                r.center, r.battery

@@ -3,9 +3,11 @@
   python -m agent.cli check [--dry-run]   livello 1, ogni 15 min (timer systemd)
   python -m agent.cli status              stampa i problemi aperti adesso, senza inviare
   python -m agent.cli telegram-chat-id    legge il chat_id dopo /start al bot
+  python -m agent.cli daily [--no-send]   livello 2, report giornaliero con Claude (timer 10:00)
 """
 import argparse
 import json
+import subprocess
 import sys
 import urllib.request
 
@@ -82,6 +84,21 @@ def cmd_chat_id(args) -> int:
     return 0
 
 
+def cmd_daily(args) -> int:
+    from . import daily
+    from .config import ROOT
+
+    usage = daily.run(send=not args.no_send)
+    print(f"report fatto: {usage}")
+    # il registro va nel repo: e' cosi' che arriva allo sviluppo
+    git = ["git", "-C", str(ROOT)]
+    subprocess.run(git + ["add", "ISSUES.md", "reports"], check=True)
+    if subprocess.run(git + ["diff", "--cached", "--quiet"]).returncode:
+        subprocess.run(git + ["commit", "-q", "-m", "Report giornaliero e registro problemi"], check=True)
+        subprocess.run(git + ["push", "-q", "origin", "main"], check=True)
+    return 0
+
+
 def main() -> int:
     p = argparse.ArgumentParser(prog="cgslim-agent")
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -90,6 +107,9 @@ def main() -> int:
     c.set_defaults(fn=cmd_check)
     sub.add_parser("status").set_defaults(fn=cmd_status)
     sub.add_parser("telegram-chat-id").set_defaults(fn=cmd_chat_id)
+    d = sub.add_parser("daily")
+    d.add_argument("--no-send", action="store_true", help="scrive report e registro senza inviarli")
+    d.set_defaults(fn=cmd_daily)
     args = p.parse_args()
     return args.fn(args)
 

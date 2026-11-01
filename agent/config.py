@@ -29,6 +29,10 @@ def env(name: str, default: str = "") -> str:
 # Macchine di sviluppo/test: fuori dai controlli (decisione utente 2026-11-01)
 EXCLUDED_MHD_PREFIXES = ("7788", "7777")
 
+# I centri commerciali spengono le macchine la notte (si riaccendono 05-09):
+# offline e' un problema solo in questa fascia, ora italiana [inizio, fine)
+ACTIVE_HOURS = (10, 20)
+
 # Soglie del livello 1 (regole). Valori tarati sui dati di novembre 2026.
 OFFLINE_WARN_MIN = 35        # il reporter manda ogni 15 min: 35 = due giri persi
 OFFLINE_CRIT_HOURS = 6

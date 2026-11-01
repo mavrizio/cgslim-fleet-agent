@@ -1,2 +1,3 @@
 psycopg[binary]>=3.2
 anthropic>=0.70
+markdown>=3.6

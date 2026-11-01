@@ -1,0 +1,11 @@
+[Unit]
+Description=cgslim-agent livello 2: report giornaliero con Claude
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=openclaw
+WorkingDirectory=/opt/cgslim-agent
+ExecStart=/opt/cgslim-agent/venv/bin/python -m agent.cli daily
+TimeoutStartSec=20min

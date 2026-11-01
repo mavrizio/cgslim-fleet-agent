@@ -12,8 +12,11 @@ import zlib
 from collections import Counter, defaultdict
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from . import config as cfg
+
+ROME = ZoneInfo("Europe/Rome")
 
 SEVERITY_ORDER = {"crit": 0, "warn": 1, "info": 2}
 
@@ -55,6 +58,11 @@ def _normalize(msg: str) -> str:
     return msg[:140]
 
 
+def _active_hours() -> bool:
+    start, end = cfg.ACTIVE_HOURS
+    return start <= datetime.now(ROME).hour < end
+
+
 def _hours_ago(h: float) -> datetime:
     return datetime.now(timezone.utc) - timedelta(hours=h)
 
@@ -68,6 +76,8 @@ def check_devices(devices: list[dict]) -> list[Finding]:
 
         if age_min > cfg.OFFLINE_WARN_MIN:
             sev = "crit" if age_min > cfg.OFFLINE_CRIT_HOURS * 60 else "warn"
+            if not _active_hours():
+                sev = "info"  # di notte e' spenta per scelta del centro
             last = d["last_seen"].astimezone().strftime("%d/%m %H:%M")
             out.append(Finding("offline", sev, did, f"{name}: offline", f"ultimo report {last}"))
             continue  # il resto dello stato e' vecchio: inutile valutarlo
