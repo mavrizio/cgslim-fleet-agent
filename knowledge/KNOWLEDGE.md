@@ -104,13 +104,22 @@ segnalare.
 ### Menu tecnico sordo dopo errore di erogazione
 Fix fw 4.20.84 + SLIM-4.20.176. Errore 101 = erogazione incompleta.
 
+### Banda "LA MACCHINA NON DA' RESTO" (MOD12, 110/111)
+Dal fw 4.20.85 + SLIM-4.20.180 la GMI manda #CHG0 quando non puo' dare resto (hopper
+monete ind. 3 assente/sotto livello basso/non risponde, monete non pagate, oppure
+ultima erogazione monete fallita, ricordo che sopravvive al riavvio): il Pi mostra la
+banda rossa e, pagando la tessera in contanti, accetta solo monete. E' voluto, non un
+guasto. #TRC8 CHG payout_fail=1/0 = fallimento registrato/cancellato (si cancella alla
+prima erogazione monete riuscita). Un payout_fail=1 che resta per giorni = hopper da
+far controllare (campo).
+
 ### Riavvii della GMI
 Firmware >= 4.20.38 manda #TRCFLT dopo un fault (type 1 HardFault, type 2/3
 reset deliberato per errore I2C EEPROM). Senza #TRCFLT e con silenzio lungo =
 watchdog (loop bloccante). Il fleet riceve FAULT_REPORT come evento/eccezione.
 
-## Versioni (2026-11-01)
-- Firmware GMI piu' recente rilasciato: 4.20.84. Pi: SLIM-4.20.176 su develop/beta.
+## Versioni (2026-11-02)
+- Firmware GMI piu' recente rilasciato: 4.20.85. Pi: SLIM-4.20.180 su develop (beta a 4.20.179).
 - I branch delle macchine in campo (mod12, parma, beta2, mod5) ricevono il codice
   nuovo solo quando lo sviluppatore fa il merge: una macchina "indietro" su un
   branch non aggiornato e' normale. E' anomala se il suo repo (git_commit) e'
