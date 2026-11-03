@@ -123,13 +123,19 @@ Ripetuto spesso = main loop del Pi bloccato o seriale instabile (vedi fe/serial)
 Sul display 16x2 della GMI compare "PI MUTO". Dal fw 4.20.87 quel display e' tecnico
 (fase GMI, credito, B M C): non e' piu' rivolto al pubblico, non e' un guasto.
 
+### MOD5: pulsante fisico GETTONI e schermata 96
+Dal fw 4.20.88 + SLIM-4.20.182 il pulsante fisico GETTONI senza credito apre la 96
+"Come vuoi pagare?" (stato della GMI, 25 s, accettatori aperti) invece della griglia
+carta 95. Screen 96 nel payload e' normale; con credito sotto il prezzo di un gettone
+il pulsante non fa nulla (voluto).
+
 ### Riavvii della GMI
 Firmware >= 4.20.38 manda #TRCFLT dopo un fault (type 1 HardFault, type 2/3
 reset deliberato per errore I2C EEPROM). Senza #TRCFLT e con silenzio lungo =
 watchdog (loop bloccante). Il fleet riceve FAULT_REPORT come evento/eccezione.
 
 ## Versioni (2026-11-03)
-- Firmware GMI piu' recente rilasciato: 4.20.87. Pi: SLIM-4.20.181 su develop (beta a 4.20.179).
+- Firmware GMI piu' recente rilasciato: 4.20.88. Pi: SLIM-4.20.182 su develop (beta a 4.20.179).
 - I branch delle macchine in campo (mod12, parma, beta2, mod5) ricevono il codice
   nuovo solo quando lo sviluppatore fa il merge: una macchina "indietro" su un
   branch non aggiornato e' normale. E' anomala se il suo repo (git_commit) e'
