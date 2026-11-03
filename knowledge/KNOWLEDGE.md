@@ -113,13 +113,23 @@ guasto. #TRC8 CHG payout_fail=1/0 = fallimento registrato/cancellato (si cancell
 prima erogazione monete riuscita). Un payout_fail=1 che resta per giorni = hopper da
 far controllare (campo).
 
+### Pagamenti bloccati perche' la GMI non sente il Pi (evento gmi_hostlink)
+Dal fw 4.20.86 + SLIM-4.20.181 il Pi manda #IAH ogni 5 s; dopo 20 s senza righe dal Pi
+la GMI chiude banconote, gettoniera e cashless (in tutte le modalita') e li riapre dopo
+3 #IAH. Nasce dalla 36842 (CG-002: Pi spento, accettatori aperti). Evento
+gmi_hostlink {"locked": true/false} solo al cambio: un locked=true seguito presto da
+false = Pi bloccato o seriale persa per qualche secondo, e' la protezione che funziona.
+Ripetuto spesso = main loop del Pi bloccato o seriale instabile (vedi fe/serial).
+Sul display 16x2 della GMI compare "PI MUTO". Dal fw 4.20.87 quel display e' tecnico
+(fase GMI, credito, B M C): non e' piu' rivolto al pubblico, non e' un guasto.
+
 ### Riavvii della GMI
 Firmware >= 4.20.38 manda #TRCFLT dopo un fault (type 1 HardFault, type 2/3
 reset deliberato per errore I2C EEPROM). Senza #TRCFLT e con silenzio lungo =
 watchdog (loop bloccante). Il fleet riceve FAULT_REPORT come evento/eccezione.
 
-## Versioni (2026-11-02)
-- Firmware GMI piu' recente rilasciato: 4.20.85. Pi: SLIM-4.20.180 su develop (beta a 4.20.179).
+## Versioni (2026-11-03)
+- Firmware GMI piu' recente rilasciato: 4.20.87. Pi: SLIM-4.20.181 su develop (beta a 4.20.179).
 - I branch delle macchine in campo (mod12, parma, beta2, mod5) ricevono il codice
   nuovo solo quando lo sviluppatore fa il merge: una macchina "indietro" su un
   branch non aggiornato e' normale. E' anomala se il suo repo (git_commit) e'
