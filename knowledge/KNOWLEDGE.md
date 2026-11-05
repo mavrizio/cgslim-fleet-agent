@@ -134,8 +134,30 @@ Firmware >= 4.20.38 manda #TRCFLT dopo un fault (type 1 HardFault, type 2/3
 reset deliberato per errore I2C EEPROM). Senza #TRCFLT e con silenzio lungo =
 watchdog (loop bloccante). Il fleet riceve FAULT_REPORT come evento/eccezione.
 
-## Versioni (2026-11-03)
-- Firmware GMI piu' recente rilasciato: 4.20.88. Pi: SLIM-4.20.182 su develop (beta a 4.20.179).
+### Profilo display "auto" (SLIM-4.20.188, golden SD universale)
+Le macchine preparate con la golden CG-NFC-GOLD v2 hanno `config.profile = "auto"`:
+il Pi sceglie il profilo a ogni avvio (touch USB Elo/Risingstar o monitor Elo,
+altrimenti 5.5"). Nel runtime il profilo scelto e' in `profile` con
+`profile_auto: true`. "auto" nella configurazione e' normale, non un errore.
+Una release < 188 che trova "auto" resta sul 5.5" (log "sconosciuto, ignorato").
+Le copie della golden al primo avvio si chiamano `CG-<ultime 8 cifre del seriale CPU>`
+e compaiono in dashboard come macchine nuove (chiave fleet rigenerata).
+
+### GMI "muta" / errore 97 sui banchi con emulatore ccTalk
+Macchine di laboratorio con due adattatori USB-seriale (GMI + emulatore ccTalk):
+prima della SLIM-4.20.189 dopo un riavvio la GMI poteva finire su ttyUSB1 e l'app
+apriva l'emulatore -> gmi_mute, errore 97, menu 9.5. Dalla 189 l'app sceglie da
+sola l'adattatore giusto (log "Porta seriale GMI: ... uso /dev/ttyUSB1"). Su queste
+macchine con release < 189 e' un problema noto del banco, non della GMI.
+
+### Menu tecnico 9.2 (SLIM-4.20.189)
+"Aggiorna software SLIM" mostra le fasi (scarico, controllo, pacchetto) e l'esito;
+un'installazione partita dalla 9.2 e' un version_change voluto dal tecnico.
+
+## Versioni (2026-11-05)
+- Firmware GMI piu' recente rilasciato: 4.20.90 (tutte le mod12 e i banchi).
+- Pi: SLIM-4.20.189 su develop e beta (solo macchine di test). mod12: 187 (15 macchine,
+  rilascio Parma del 5/11). mod5: 187. Golden v2 "auto": 188 su canale mod5.
 - I branch delle macchine in campo (mod12, parma, beta2, mod5) ricevono il codice
   nuovo solo quando lo sviluppatore fa il merge: una macchina "indietro" su un
   branch non aggiornato e' normale. E' anomala se il suo repo (git_commit) e'
