@@ -27,6 +27,7 @@ BATCH_POLL_S, BATCH_MAX_WAIT_S = 30, 3 * 3600
 WEEKLY_REVIEW_DAY = 0                      # lunedi': analisi anche senza novita'
 ISSUES_STATE = cfg.ROOT / "data" / "issues.json"  # nel repo: il registro non deve vivere solo sul server
 ISSUES_MD = cfg.ROOT / "ISSUES.md"
+ISSUES_URL = "https://github.com/mavrizio/cgslim-fleet-agent/blob/main/ISSUES.md"
 DAILY_LOG = cfg.STATE_DIR / "daily_log.json"
 
 # Eventi che da soli giustificano l'analisi (reboot e cambi versione sono la normalita')
@@ -342,7 +343,9 @@ def render_issues_md(issues: list[dict]) -> str:
             continue
         lines += [f"## {label}", ""]
         for i in group:
-            lines += [f"### {i['id']} · {i['title']}", "",
+            # ancora esplicita: il link dalla mail non dipende dal titolo, che cambia
+            lines += [f'<a id="{i["id"].lower()}"></a>', "",
+                      f"### {i['id']} · {i['title']}", "",
                       f"- **Area:** {i['area']} · **Gravita':** {i['severity']} · "
                       f"**Visto:** {i['first_seen']} → {i['last_seen']}",
                       f"- **Macchine:** {', '.join(i['machines']) or '—'}",
@@ -353,6 +356,18 @@ def render_issues_md(issues: list[dict]) -> str:
                 lines.append(f"- **Gia' noto:** {i['known_issue']}")
             lines.append("")
     return "\n".join(lines)
+
+
+def link_issues(text: str, issues: list[dict]) -> str:
+    """Ogni CG-NNN del registro diventa un link alla sua voce in ISSUES.md su GitHub."""
+    known = {i["id"] for i in issues}
+
+    def repl(m):
+        code = m.group(0)
+        return f"[{code}]({ISSUES_URL}#{code.lower()})" if code in known else code
+
+    # non tocca i codici gia' dentro un link [..](..)
+    return re.sub(r"(?<!\[)\bCG-\d{3}\b(?!\])", repl, text)
 
 
 # --- giro completo ---------------------------------------------------------------
@@ -378,8 +393,8 @@ def run(send: bool = True, force: bool = False) -> dict:
         analysis = "## In breve\n\nNessuna novita' nelle ultime 24 h: nessun avviso nuovo, nessun evento anomalo."
         footer = "_Analisi saltata (giornata tranquilla), costo 0 $_"
 
-    report = (f"# Report flotta CGSLIM · {datetime.now(ROME):%d/%m/%Y}\n\n{analysis}\n\n"
-              f"{scripted_report(ctx, issues)}\n---\n{footer}\n")
+    report = link_issues(f"# Report flotta CGSLIM · {datetime.now(ROME):%d/%m/%Y}\n\n{analysis}\n\n"
+                         f"{scripted_report(ctx, issues)}\n---\n{footer}\n", issues)
 
     cfg.STATE_DIR.mkdir(parents=True, exist_ok=True)
     cfg.REPORTS_DIR.mkdir(parents=True, exist_ok=True)

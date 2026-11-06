@@ -6,7 +6,7 @@ import urllib.parse
 import urllib.request
 from email.message import EmailMessage
 
-from .config import env
+from .config import ROOT, env
 
 TELEGRAM_MAX = 4000  # il limite e' 4096: margine per i tag HTML
 
@@ -32,11 +32,22 @@ def telegram(text_html: str) -> None:
                 raise RuntimeError("Telegram ha rifiutato il messaggio")
 
 
+def recipients() -> list[str]:
+    """config/destinatari.txt (nel repo: si cambia con un push dal Mac); se manca, REPORT_EMAIL_TO."""
+    try:
+        lines = (ROOT / "config" / "destinatari.txt").read_text(encoding="utf-8").splitlines()
+        found = [l.split("#")[0].strip() for l in lines]
+        found = [a for a in found if "@" in a]
+    except FileNotFoundError:
+        found = []
+    return found or [env("REPORT_EMAIL_TO")]
+
+
 def email(subject: str, text: str, html_body: str | None = None) -> None:
     msg = EmailMessage()
     msg["Subject"] = subject
     msg["From"] = env("SMTP_FROM") or env("SMTP_USER")
-    msg["To"] = env("REPORT_EMAIL_TO")
+    msg["To"] = ", ".join(recipients())
     msg.set_content(text)
     if html_body:
         msg.add_alternative(html_body, subtype="html")
