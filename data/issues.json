@@ -39,15 +39,15 @@
  },
  {
   "id": "CG-003",
-  "title": "POS DISCONNECTED dopo timeout get_advanced_config: 24350, 24866, 33326, 37008 (anche con 187 e 189)",
+  "title": "POS DISCONNECTED dopo timeout get_advanced_config: fisso su 24350, 33326, 37008; 24866 tornata IDLE col Pi nuovo",
   "status": "open",
   "severity": "high",
   "area": "pi",
   "machines": [
    "24350",
-   "24866",
    "33326",
    "37008",
+   "24866",
    "24349",
    "25158",
    "36842",
@@ -62,15 +62,15 @@
    "24254"
   ],
   "first_seen": "2026-10-31",
-  "last_seen": "2026-11-06",
-  "evidence": "Ora DISCONNECTED con 'Timeout locale in attesa di get_advanced_config (15.0s)':\n- 24350 (187): 1 vendita cash alle 16:19;\n- 24866 (187): 6 cash, nessuna carta; anche col Pi nuovo delle 09:48;\n- 33326 (189): nessuna transazione;\n- 37008 (187): 12 cash, nessuna carta.\nAvviso 'POS in errore su 3 macchine' aperto dalle 05:02 UTC.\n36842 dopo il cambio Pi: IDLE e senza p95_error.\n'Connessione persa durante get_advanced_config', rientrate entro 15 min (UTC):\n- 24349 alle 12:47 e 15:02;\n- 25158 alle 15:32;\n- 36842 alle 16:17;\n- 26087 alle 16:32 e 20:47;\n- 29597 alle 17:02.",
-  "hypothesis": "Su alcuni terminali la lettura cashless_info va sempre in timeout e il pos-engine resta DISCONNECTED. Le release 187 e 189 non cambiano il comportamento.\nSu 24866 il problema resta col Pi nuovo: sembra legato al terminale e non al Pi.",
-  "proposal": "Maurizio:\n- Un errore di get_advanced_config non deve bloccare il P95: saltare la lettura e ritentarla con backoff.\n- Log di pos-engine da 37008 o 33326.\nCampo: prova con carta reale su 24350 e 24866.",
+  "last_seen": "2026-11-07",
+  "evidence": "07/11 alle 10:00 DISCONNECTED con 'Timeout locale in attesa di get_advanced_config (15.0s)':\n- 24350: reboot alle 06:11 e alle 09:12, l'errore resta; 2 vendite cash ieri;\n- 33326: nessuna transazione;\n- 37008: 3 cash, nessun reboot da 2,3 giorni.\nAvviso 'POS in errore su 3 macchine' aperto dalle 08:17 UTC.\n24866 col Pi nuovo:\n- ora IDLE, TID 92818193 letto;\n- 3 carte approvate nelle 24 h;\n- dopo il reboot delle 14:00 del 06/11, 17 errori 'Operazione get_advanced_config gia' in corso' tra le 14:00 e le 14:03 (vedi CG-012).\n'Connessione persa durante get_advanced_config', rientrate entro 15 min: 36842 alle 14:47 UTC, 23718 e 24338 alle 21:02 UTC.",
+  "hypothesis": "La lettura cashless_info a volte va in timeout. Quando succede, il pos-engine resta DISCONNECTED senza ritentare con successo, anche dopo un reboot (24350).\nSu 24866 la lettura alla fine e' riuscita: il problema non e' fisso sul terminale, quindi l'ipotesi di ieri e' smentita. Sembra intermittente.",
+  "proposal": "Maurizio:\n- Un errore di get_advanced_config non deve bloccare il P95: saltare la lettura e ritentarla con backoff.\n- Log di pos-engine da 24350 o 37008.\nCampo: prova con carta reale su 24350.",
   "known_issue": "POS: get_advanced_config"
  },
  {
   "id": "CG-004",
-  "title": "Seriale GMI assente all'accensione (FTDI non enumerato), cavi lotto BG03E: ricapitato su 25158",
+  "title": "Seriale GMI assente all'accensione (FTDI non enumerato), cavi lotto BG03E",
   "status": "open",
   "severity": "medium",
   "area": "hardware",
@@ -80,14 +80,14 @@
   ],
   "first_seen": "2026-11-01",
   "last_seen": "2026-11-06",
-  "evidence": "06/11 su 25158 (cavo BG03ES5F):\n- reboot alle 09:22 (uptime 109);\n- exception 'ERRORE CRITICO SERIALE ... /dev/ttyUSB0';\n- serial_missing not_enumerated: sul bus solo hub, LAN e touch ILITEK, nessun FTDI;\n- reboot alle 09:26 (uptime 41) e serial_recovery alle 09:27, poi in servizio (screen 71).\n32996 (BG03ER1N): reboot alle 09:03 senza serial_missing, secondo mattino pulito.\nIl 05/11 nessun episodio. Il cavo non e' stato scambiato.",
-  "hypothesis": "Problema noto e intermittente del lotto FT232R BG03E e/o dell'alimentazione a ritroso dalla GMI. Il mattino pulito di ieri non indicava una risoluzione.",
+  "evidence": "07/11: mattino pulito, nessun serial_missing ne' eccezione seriale.\n- 25158 (cavo BG03ES5F): un solo reboot alle 09:22 (uptime 119).\n- 32996 (BG03ER1N): reboot alle 09:04.\nUltimo episodio il 06/11 alle 09:22 su 25158, rientrato con serial_recovery.\nIl cavo non risulta scambiato: l'adapter della 25158 e' ancora BG03ES5F.",
+  "hypothesis": "Problema noto e intermittente del lotto FT232R BG03E e/o dell'alimentazione a ritroso dalla GMI. I mattini puliti (05/11, 07/11) non indicano una risoluzione.",
   "proposal": "Campo Parma: scambiare il cavo della 25158 con uno AL05 e lasciare 32996 come controllo.\nPi: riavvio anticipato, uhubctl e TX della GMI in high-Z nel prossimo rilascio.",
   "known_issue": "Seriale assente al mattino (serial_missing, not_enumerated)"
  },
  {
   "id": "CG-005",
-  "title": "Sottotensione del Raspberry: 23718 fissa, 24349 a episodi tutto il giorno; 36842 risolta col cambio Pi, 33326 0x0 dopo il reboot delle 09:50",
+  "title": "Sottotensione del Raspberry: 23718 fissa, 24349 a episodi tutto il giorno; 33326 pulita da ieri mattina",
   "status": "open",
   "severity": "medium",
   "area": "hardware",
@@ -97,21 +97,20 @@
    "33326",
    "24254",
    "24350",
-   "24338",
-   "36842"
+   "24338"
   ],
   "first_seen": "2026-11-01",
-  "last_seen": "2026-11-06",
-  "evidence": "Orari degli avvisi in UTC.\n- 23718: 0x50005 aperto dal 03/11 10:47, ancora attivo alle 08:47. Uptime 251113 s: non si spegne la notte.\n- 24349, episodi ADESSO il 05/11: 09:02, 10:17, 11:47, 12:47, 14:17, 15:02, 15:47, 16:17, 17:02, 19:02, 20:02, 20:32, 21:02, 21:32, 22:32. Ora 0x50000.\n- 33326: episodi ogni 30-60 min dal 05/11 08:47 al 06/11 08:47 (avviso ancora aperto). Dopo il reboot delle 09:50 locali il payload e' 0x0.\n- 36842: episodi alle 09:02, 11:32, 14:02 e 14:32 sul Pi vecchio (a771b94f). Dal Pi nuovo (24e994d9, first_seen 15:30 locali) 0x0.\n- Sottotensione dal boot (0x50000): 24254, 24338, 24350 (ieri 0xd0000).",
-  "hypothesis": "Alimentatori o cavi deboli. Su 36842 il cambio del Pi (con il suo alimentatore?) ha eliminato la sottotensione.\nSu 33326 non si sa se il reboot delle 09:50 sia stato un intervento sull'alimentazione: va confermato nelle prossime ore.",
-  "proposal": "Hardware/campo, in ordine:\n1. 23718 (fissa da 3 giorni).\n2. 24349.\n3. 24254 (vedi CG-009).\n4. Verificare se su 33326 e' stato cambiato l'alimentatore.\n5. 24350 e 24338.",
+  "last_seen": "2026-11-07",
+  "evidence": "Orari degli avvisi in UTC.\n- 23718: 0x50005 ancora ADESSO, avviso aperto dal 03/11 10:47, ultimo alle 08:47 di oggi. Riavviata alle 21:49 locali del 06/11.\n- 24349, episodi ADESSO il 06/11: 10:02, 10:47, 11:17, 13:32-14:02, 16:02-16:17, 17:17, 18:02, 19:02-19:32, 20:47-21:02, 21:32, 23:02-23:17. Oggi 0x50000 dopo il reboot delle 09:18.\n- 33326: ultimo avviso 06/11 08:47, chiuso alle 09:02. Oggi 0x0 con uptime 12 h.\n- 36842: 0x0 col Pi nuovo.\n- Sottotensione dal boot (0x50000): 24338, 24350, 24254 (offline).",
+  "hypothesis": "Alimentatori o cavi deboli. Su 33326 il problema sembra sparito dal reboot del 06/11 mattina: va confermato.",
+  "proposal": "Hardware/campo, in ordine:\n1. 23718 (fissa da 4 giorni).\n2. 24349.\n3. 24254 (vedi CG-009).\n4. 24350 e 24338.\nSu 33326: togliere la macchina dalla voce se resta a 0x0 fino a lunedi'.",
   "known_issue": "host.throttled 0x50000 (scheda campi); sottotensione sospettata nei flash GMI falliti"
  },
  {
   "id": "CG-006",
-  "title": "TID POS anomali: 36842 ancora TID 00000000 anche col Pi nuovo, beta con TID di prova 9794248x",
+  "title": "36842: terminale non parametrizzato (TID 00000000) ora fa fallire i pagamenti carta con codice 20; beta con TID di prova 9794248x",
   "status": "open",
-  "severity": "medium",
+  "severity": "high",
   "area": "pos",
   "machines": [
    "36842",
@@ -121,10 +120,10 @@
    "33326"
   ],
   "first_seen": "2026-10-30",
-  "last_seen": "2026-11-06",
-  "evidence": "36842, dopo il cambio del Pi del 05/11 15:30:\n- POS IDLE e connesso;\n- TID 00000000, nessun acquirer, package 01.04.25.03, SN 58551425;\n- solo 2 vendite cash, nessuna carta.\nTID della serie di prova 9794248x:\n- 24338: 97942485;\n- 23718: 97942484;\n- 28418: 97942488.\n33326: POS DISCONNECTED, TID non leggibile.",
-  "hypothesis": "Il terminale della 36842 non e' parametrizzato: il cambio del Pi non c'entra. I TID 9794248x sembrano di prova e in produzione rischiano l'errore 48.",
-  "proposal": "Hardware/POS:\n- Parametrizzare la 36842 con il TID di produzione.\n- Verificare i TID di 24338, 23718 e 28418.\n- Leggere il TID di 33326 quando il POS torna connesso.",
+  "last_seen": "2026-11-07",
+  "evidence": "36842 il 06/11, 19 transazioni:\n- 8 cash approvate;\n- 11 carta tutte in errore 'POS non configurato (codice 20)': 1 alle 16:38, 6 alle 16:39, 3 alle 16:40, 1 alle 17:22;\n- card_activity: 0 ok, 11 ko.\nOggi POS IDLE, TID 00000000, nessun acquirer, package 01.04.25.03, SN 58551425.\nTID della serie di prova 9794248x: 24338 97942485, 23718 97942484, 28418 97942488.\n33326: POS DISCONNECTED, TID non leggibile.",
+  "hypothesis": "Il terminale della 36842 non ha parametri bancari, quindi ogni pagamento carta fallisce. I clienti riprovano piu' volte di fila (6 in un minuto).\nI TID 9794248x sembrano di prova.",
+  "proposal": "Hardware/POS: parametrizzare subito il terminale della 36842 con il TID di produzione.\nMaurizio:\n- Nel frattempo disabilitare la carta su 36842.\n- Valutare un blocco automatico della carta quando il TID e' 00000000 o manca l'acquirer.\nVerificare i TID di 24338, 23718 e 28418.",
   "known_issue": "POS: altri errori (errore 48, TID duplicato su 24338)"
  },
  {
@@ -166,7 +165,7 @@
  },
  {
   "id": "CG-009",
-  "title": "24254 (Aprilia) si ferma la sera alle ~19:50 (5 volte) e si spegne anche in giornata",
+  "title": "24254 (Aprilia) si ferma la sera alle ~19:45-19:54 (6 volte) e riparte a mano in tarda mattinata",
   "status": "open",
   "severity": "high",
   "area": "campo",
@@ -174,10 +173,10 @@
    "24254"
   ],
   "first_seen": "2026-11-02",
-  "last_seen": "2026-11-06",
-  "evidence": "05/11:\n- offline dalle 11:10 (avviso alle 10:47 UTC);\n- reboot alle 13:05 (uptime 140, fuori dal timer);\n- aggiornata a 187 alle 17:05 e fw 4.20.90 alle 17:09;\n- ultimo report alle 19:54: quinta sera consecutiva tra le 19:47 e le 19:54.\n06/11: alle 10:00 ancora offline (845 min). Ieri si era riaccesa alle 08:53.\nConfigurazioni GIT_PULL_INTERVAL_SEC e INTERVAL_UPDATE_CHECK pending dal 05/11 20:33 UTC (macchina gia' offline).\nNelle 24 h: 1 carta approvata alle 15:01, 3 timeout cliente e 1 cash.",
-  "hypothesis": "L'alimentazione viene tolta a orario fisso la sera e la macchina viene rialimentata a mano in giornata: presa o timer diversi dalle altre Aprilia. Lo spegnimento delle 11:10 e la sottotensione dal boot indicano anche un'alimentazione instabile.",
-  "proposal": "Campo Aprilia, oggi:\n- Verificare presa e timer e riaccendere la macchina.\n- Sostituire l'alimentatore.\n- Recuperare journal e dmesg attorno alle 11:10 e alle 19:54 del 05/11.",
+  "last_seen": "2026-11-07",
+  "evidence": "06/11:\n- reboot alle 10:54 (uptime 138, fuori dal timer), app_restart alle 10:54 e 10:56, gmi_hostlink locked/unlocked alle 10:57;\n- ultimo report alle 19:44: sesta sera consecutiva tra le 19:44 e le 19:54.\n07/11 alle 10:00: offline da 855 min.\nNelle 24 h:\n- 5 tentativi carta: 4 'nessuna carta entro il tempo' (11:36, 12:46, 14:20, 16:02) e 1 annullato;\n- nessuna vendita approvata, nessun cash.\nThrottled 0x50000.",
+  "hypothesis": "L'alimentazione viene tolta a orario fisso la sera e la macchina viene riaccesa a mano in giornata: presa o timer diversi dalle altre Aprilia, che si spengono verso le 23:20-23:50.\nLa sottotensione dal boot indica anche un alimentatore debole.",
+  "proposal": "Campo Aprilia, oggi:\n- Verificare presa e timer e riaccendere la macchina.\n- Sostituire l'alimentatore.\n- Recuperare journal e dmesg attorno alle 19:44 del 06/11.",
   "known_issue": ""
  },
  {
@@ -198,7 +197,7 @@
  },
  {
   "id": "CG-011",
-  "title": "Dashboard: centro null, chiave non corrispondente e config pending su 33326, device duplicati dopo cambio Pi (24866, 36842)",
+  "title": "Dashboard: centro null, chiave non corrispondente su 33326, device duplicato 24866 dopo cambio Pi",
   "status": "open",
   "severity": "low",
   "area": "dashboard",
@@ -212,29 +211,30 @@
    "36842"
   ],
   "first_seen": "2026-11-04",
-  "last_seen": "2026-11-06",
-  "evidence": "Centro ancora null per 23718, 24338, 28418, 33326 e 37008.\n33326 (device 27192bb4):\n- device_key mismatch (nuovo evento alle 15:55 del 05/11);\n- INTERVAL_UPDATE_CHECK di nuovo pending dal 05/11 20:33 UTC, pur essendo online.\n24866 compare due volte:\n- device b7233887 (Pi Model B Plus Rev 1.2, ultimo report 08:32, avviso offline);\n- device nuovo 'CG-NFC-BETA' (Pi 3 B+, first_seen alle 09:48, device_key_enrolled alle 09:49). Stesso uid GMI e stesso cavo AL05ZNFW.\n36842: nuovo device 24e994d9 'CG-NFC-BETA' (first_seen 05/11 15:30), vecchio a771b94f.\nPer questo il conteggio flotta e' 22 invece di 21.",
-  "hypothesis": "I cambi di Pi/SD creano un nuovo device e la dashboard non unisce quello vecchio con lo stesso MHD. Il conteggio online risulta falsato. Su 33326 la chiave non corrisponde, quindi le configurazioni non vengono accettate.",
-  "proposal": "Dashboard/Maurizio:\n- Archiviare b7233887 e a771b94f, oppure unire per MHD tenendo il device piu' recente.\n- Ri-registrare la chiave di 33326 e capire perche' le config restano pending.\n- Completare il centro delle 5 macchine.",
+  "last_seen": "2026-11-07",
+  "evidence": "Centro ancora null per 23718, 24338, 28418, 33326 e 37008.\nLe prime quattro si sono riavviate insieme il 06/11 tra le 21:48 e le 21:49 (uptime ~114-137 s): probabilmente sono nello stesso posto o sulla stessa alimentazione.\n33326: nuovo evento device_key_mismatch il 06/11 alle 16:01, device_key_status 'mismatch'. Lo stato delle config pending oggi non e' nei dati.\n24866 compare ancora due volte:\n- b7233887: offline, ultimo report 06/11 08:32;\n- device nuovo: online.\nIl conteggio flotta resta 22 invece di 21.",
+  "hypothesis": "I cambi di Pi/SD creano un nuovo device che la dashboard non unisce al vecchio con lo stesso MHD. Su 33326 la chiave non corrisponde, quindi le configurazioni non vengono accettate.",
+  "proposal": "Dashboard/Maurizio:\n- Archiviare b7233887 e a771b94f, oppure unire per MHD tenendo il device piu' recente.\n- Ri-registrare la chiave di 33326.\n- Completare il centro delle 5 macchine: chiedere dove si trovano 23718, 24338, 28418 e 33326.",
   "known_issue": "Profilo display auto / golden SD (hostname clonati, chiave fleet rigenerata)"
  },
  {
   "id": "CG-012",
-  "title": "POS: 'activate gia' in corso' e 'POS non attivo (codice 90)' subito dopo l'avvio",
+  "title": "POS non pronto subito dopo l'avvio: 'gia' in corso', Broken pipe, codice 90 (raffica su 24866)",
   "status": "open",
   "severity": "medium",
   "area": "pi",
   "machines": [
    "24254",
    "28418",
-   "33957"
+   "33957",
+   "24866"
   ],
   "first_seen": "2026-11-04",
-  "last_seen": "2026-11-05",
-  "evidence": "Nelle ultime 24 h nessun 'activate gia' in corso'.\n33957 il 05/11 alle 11:16: 'POS non attivo (codice 90)'. Era il giorno dell'installazione, circa 25 min dopo il primo avvio e il flash ST-Link. Poi 14 approvate su 17 (5 carta).\n24254: solo timeout cliente.\nStorico:\n- 24254, 04/11 alle 11:04: 28 errori 'activate gia' in corso';\n- 24254, 05/11 alle 09:00: codice 90;\n- 28418, 04/11 alle 10:32.",
-  "hypothesis": "Un pagamento viene avviato mentre il POS non ha finito l'attivazione dopo l'avvio. Oggi si e' presentato una sola volta.",
-  "proposal": "Maurizio: nel client P95 attendere l'activate invece di restituire errore. Disabilitare la carta finche' il POS non e' IDLE.",
-  "known_issue": ""
+  "last_seen": "2026-11-06",
+  "evidence": "24866, il 06/11 attorno al reboot delle 14:00:\n- Broken pipe alle 13:58 e alle 14:03;\n- 17 'Operazione get_advanced_config gia' in corso' (8 alle 14:00, 8 alle 14:02, 1 alle 14:03);\n- 'POS non attivo (codice 90)' alle 14:03 e alle 14:04.\nIn tutto 21 errori in 6 minuti con clienti che riprovavano.\n33957: codice 90 il 06/11 alle 10:08.\nStorico:\n- 24254, 04/11: 28 'activate gia' in corso';\n- 24254, 05/11 alle 09:00: codice 90;\n- 28418, 04/11.",
+  "hypothesis": "Dopo l'avvio i pagamenti partono mentre il POS si sta attivando o mentre e' in corso la lettura cashless_info. L'attesa max di 8 s non basta e la carta resta proponibile al cliente.",
+  "proposal": "Maurizio:\n- Disabilitare la carta finche' il POS non e' IDLE e la lettura cashless_info non e' terminata.\n- Oppure rimandare la lettura se un pagamento e' in coda.\n- Nel client P95 attendere l'activate invece di restituire errore.",
+  "known_issue": "POS: get_advanced_config (operazione gia' in corso)"
  },
  {
   "id": "CG-013",
@@ -257,7 +257,7 @@
  },
  {
   "id": "CG-014",
-  "title": "MOD inattesa su branch mod5: 24866 ora mod 12 col Pi nuovo, 23718 mod 4 senza vendite",
+  "title": "MOD inattesa su branch mod5: 24866 mod 12 col Pi nuovo, 23718 ora mod 1 senza vendite",
   "status": "open",
   "severity": "medium",
   "area": "firmware",
@@ -266,10 +266,10 @@
    "23718"
   ],
   "first_seen": "2026-11-05",
-  "last_seen": "2026-11-06",
-  "evidence": "24866 (branch mod5, fw 4.20.90):\n- col Pi vecchio era mod 2, screen 40;\n- col Pi nuovo (09:48) e' mod 12, screen 71, hopper 1,0,0;\n- 6 vendite cash il 05/11 (10:18-18:23).\n23718 (branch mod5, 187):\n- mod 4, screen 23, hopper 0,0,0;\n- nessuna transazione nelle 24 h; ultima carta approvata circa il 03/11;\n- uptime 2,9 giorni.",
-  "hypothesis": "Su 24866 la MOD cambia con l'intervento sul posto: o la modalita' e' stata reimpostata dal tecnico, o la GMI riporta valori diversi.\nSu 23718 mod 4 con hopper 0,0,0 potrebbe spiegare l'assenza di vendite. Il significato di mod 4 non e' nella scheda.",
-  "proposal": "Maurizio: chiarire quali MOD sono attese per 24866 e 23718 e se il flash 4.20.90 preserva la MOD.\nCampo:\n- Aprilia: controllare la modalita' di 24866 dal menu tecnico.\n- 23718: verificare che eroghi (tramogge, schermata).",
+  "last_seen": "2026-11-07",
+  "evidence": "24866 (branch mod5):\n- device nuovo a mod 12, screen 70, hopper 1,1,0;\n- il device vecchio riportava mod 2, screen 40;\n- 06/11: reboot fuori orario alle 12:25 e alle 14:00 (uptime ~60), con gmi_hostlink locked/unlocked ripetuti (12:27-12:30, 13:52, 14:01-14:05): probabile intervento sul posto;\n- 40 transazioni, 11 approvate.\n23718 (branch mod5):\n- ora mod 1, screen 46, hopper 0,0,0;\n- ieri era mod 4, screen 23;\n- nessuna transazione nelle 24 h;\n- riavviata alle 21:49 del 06/11.",
+  "hypothesis": "Su 24866 la modalita' e' stata probabilmente reimpostata dal tecnico durante l'intervento del 06/11.\nSu 23718 la MOD cambia tra un report e l'altro: macchina di prova, oppure valore non affidabile. Mod 1 e mod 4 non sono nella scheda.",
+  "proposal": "Maurizio: chiarire quali MOD sono attese per 24866 e 23718.\nCampo:\n- Aprilia: confermare la MOD di 24866 dal menu tecnico.\n- 23718: verificare se e' una macchina di prova o in servizio.",
   "known_issue": ""
  },
  {
@@ -290,20 +290,21 @@
  },
  {
   "id": "CG-016",
-  "title": "Contatori errori seriali alti lato GMI: 28418 (fe 98, ore 70, test linea KO) e 29598 (ne 127)",
+  "title": "Contatori errori seriali alti lato GMI: 29598 (ne ~120 ogni mattina), 37008 (ore 108), 28418 e 23718",
   "status": "open",
   "severity": "low",
   "area": "hardware",
   "machines": [
-   "28418",
    "29598",
+   "37008",
+   "28418",
    "23718"
   ],
   "first_seen": "2026-11-06",
-  "last_seen": "2026-11-06",
-  "evidence": "Contatori lato GMI:\n- 28418: fe=98, ne=29, ore=70 con uptime 779344 s (circa 9 giorni acceso); ultimo test linea KO il 20/10.\n- 29598: ne=127 con uptime 11011 s.\n- 23718: fe=50, ore=66.\nLe altre mod12 hanno fe 2-8 e ne 0-5.\nNessun gmi_hostlink anomalo in giornata su queste macchine: solo quello all'avvio di 29598 alle 06:45 e il riavvio app delle 21:48.",
-  "hypothesis": "Linea seriale disturbata (cavo, massa o GMI verde). Su 28418 i contatori possono essersi accumulati nei 9 giorni di accensione continua. Su 29598 tanti ne in 3 h sono anomali.",
-  "proposal": "Campo: test linea 8.4 su 29598 e 28418.\nMaurizio: valutare l'invio dei contatori come delta giornaliero per poterli confrontare.",
+  "last_seen": "2026-11-07",
+  "evidence": "Contatori lato GMI oggi:\n- 29598: ne=118 con uptime 11022 s. Ieri ne=127 con uptime 11011: stesso valore in 3 h dopo ogni accensione.\n- 37008: ore=108 con uptime 198604 s.\n- 28418: fe=10, ne=5, ore=19 dopo il reboot delle 21:48 (12 h); test linea KO il 20/10.\n- 23718: fe=22, ore=24 in 12 h.\nLe mod12 Parma hanno fe 3-6 e ne 0-2.\nNessun gmi_hostlink anomalo fuori dagli avvii.",
+  "hypothesis": "Su 29598 gli errori ne si accumulano tutti all'avvio o nelle prime ore: rumore sistematico sulla linea (cavo A10KIK4A, massa o GMI verde).\nSu 37008 e 28418 sono overrun ricorrenti.",
+  "proposal": "Campo: test linea 8.4 su 29598, poi su 28418 e 37008.\nMaurizio: inviare i contatori come delta giornaliero, o con timestamp del primo errore, per capire se nascono all'avvio.",
   "known_issue": "Aggiornamento firmware GMI (linea disturbata GMI verdi)"
  }
 ]
