@@ -2,4 +2,4 @@
 # Si modifica qui (sul Mac), commit + push: il server lo prende da solo entro 10 minuti.
 maurizio@tolfa.biz
 simone.tintisona@dedem.it
-vittorio.panvino@dedem.it
+vittorio.guido@dedem.it
