@@ -32,7 +32,8 @@ DAILY_LOG = cfg.STATE_DIR / "daily_log.json"
 
 # Eventi che da soli giustificano l'analisi (reboot e cambi versione sono la normalita')
 NOTABLE_EVENTS = {"exception", "app_down", "serial_missing", "serial_recovery_exhausted",
-                  "gmi_flash_failed", "update_failed", "device_key_enrolled", "first_seen"}
+                  "gmi_flash_failed", "update_failed", "device_key_enrolled", "first_seen",
+                  "gate_short_change"}
 
 SYSTEM = """Sei l'analista tecnico della flotta CGSLIM (cambiamonete nei centri commerciali).
 Ogni giorno ricevi lo stato delle macchine di produzione e gli eventi delle ultime 24 ore.

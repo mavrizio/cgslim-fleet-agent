@@ -27,6 +27,8 @@ EVENT_RULES = {
     "gmi_flash_failed": ("warn", "Aggiornamento firmware GMI fallito"),
     "serial_recovery_exhausted": ("crit", "Seriale GMI persa, recupero esaurito"),
     "app_down": ("warn", "App main.py giu'"),
+    # MOD10 tornello: l'hopper non ha dato tutto il resto, il cliente e' entrato lo stesso
+    "gate_short_change": ("warn", "Tornello: resto non completato, rifornire l'hopper"),
 }
 
 
@@ -159,6 +161,8 @@ def check_events(devices: list[dict], events: list[dict], window_h: float) -> li
         sev, title = EVENT_RULES[e["kind"]]
         data = e.get("data") or {}
         detail = str(data.get("error") or data.get("case") or "")[:200]
+        if e["kind"] == "gate_short_change":
+            detail = f"resto {data.get('due', 0) / 100:.2f} euro, erogati {data.get('paid', 0) / 100:.2f}"
         out.append(Finding(e["kind"], sev, e["device_id"], f"{name(e['device_id'])}: {title}", detail))
 
     # eccezioni: raggruppate per messaggio, vanno al report (info)

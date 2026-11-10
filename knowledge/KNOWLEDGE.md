@@ -154,6 +154,16 @@ macchine con release < 189 e' un problema noto del banco, non della GMI.
 "Aggiorna software SLIM" mostra le fasi (scarico, controllo, pacchetto) e l'esito;
 un'installazione partita dalla 9.2 e' un version_change voluto dal tecnico.
 
+### MOD10 Tornello (scivolo a pagamento, in sviluppo dal 2026-11-10)
+MOD10 non e' piu' "vending con resto": e' il tornello di uno scivolo per bambini (firmware
+`vnd_gate.c`, `docs/TORNELLO.md`; Pi `src/modes/tornello/`), rami `tornello`, non ancora in
+produzione. Una corsa per pagamento (banconote 5/10 con resto in monete, oppure carta dal
+touch), schermi 160..167. Il tornello non si blocca mai: se l'hopper non da' tutto il resto
+arriva l'evento `gate_short_change` (dovuto/erogato/mancante in centesimi) e il cliente entra
+lo stesso; il non erogato resta credito per 2 minuti (`TRC`) e poi si azzera (riga
+"Credito scaduto" nelle transazioni). Livello basso dell'hopper = banconote spente, si paga
+solo con carta: non e' un guasto. Un `gate_short_change` = hopper da rifornire o inceppato.
+
 ## Versioni (2026-11-05)
 - Firmware GMI piu' recente rilasciato: 4.20.90 (tutte le mod12 e i banchi).
 - Pi: SLIM-4.20.189 su develop e beta (solo macchine di test). mod12: 187 (15 macchine,
