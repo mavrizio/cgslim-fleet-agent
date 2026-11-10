@@ -16,7 +16,7 @@ e collegalo; non presentarlo come scoperta.
   gestito dal servizio `pos-engine` sul Pi (porta locale 6031). Lettori MDB
   (Ingenico SELF/2000 in "modalita' 2") passano invece dalla GMI.
 - Aggiornamenti: `gitpuller` sul Pi segue un branch git (develop, beta2, mod12,
-  parma, mod5...), costruisce la release in /opt/cgslim/current e, se la release
+  parma, mod5, mod10 per i totem del tornello...), costruisce la release in /opt/cgslim/current e, se la release
   contiene un HEX nuovo, flasha la GMI via bootloader seriale.
 - **fleet-reporter** sul Pi manda lo stato ogni 15 min (subito sugli eventi) al
   DB Supabase `cgslim-fleet`; la dashboard e' cgslim-fleet.vercel.app.
@@ -162,12 +162,13 @@ touch), schermi 160..167. Il tornello non si blocca mai: se l'hopper non da' tut
 arriva l'evento `gate_short_change` (dovuto/erogato/mancante in centesimi) e il cliente entra
 lo stesso; il non erogato resta credito per 2 minuti (`TRC`) e poi si azzera (riga
 "Credito scaduto" nelle transazioni). Livello basso dell'hopper = schermo 161 "non da' resto,
-importo esatto": i contanti restano accettati, non e' un guasto. Un `gate_short_change` = hopper da rifornire o inceppato.
+importo esatto": banconote rifiutate, solo monete per l'importo esatto o carta, non e' un guasto. Un `gate_short_change` = hopper da rifornire o inceppato.
 
-## Versioni (2026-11-05)
-- Firmware GMI piu' recente rilasciato: 4.20.90 (tutte le mod12 e i banchi).
-- Pi: SLIM-4.20.189 su develop e beta (solo macchine di test). mod12: 187 (15 macchine,
-  rilascio Parma del 5/11). mod5: 187. Golden v2 "auto": 188 su canale mod5.
+## Versioni (2026-11-10)
+- Firmware GMI piu' recente: 4.20.93 (MOD10 tornello), su develop e mod10. 4.20.92 con
+  SLIM-4.20.192 su develop/beta/mod5/mod12 dal 10/11.
+- Pi: SLIM-4.20.193 su develop e sul canale nuovo mod10 (totem del tornello, ancora
+  nessuna macchina in campo). mod12 (Parma) e mod5: 192.
 - I branch delle macchine in campo (mod12, parma, beta2, mod5) ricevono il codice
   nuovo solo quando lo sviluppatore fa il merge: una macchina "indietro" su un
   branch non aggiornato e' normale. E' anomala se il suo repo (git_commit) e'
