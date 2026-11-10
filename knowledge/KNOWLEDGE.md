@@ -161,8 +161,8 @@ produzione. Una corsa per pagamento (banconote 5/10 con resto in monete, oppure 
 touch), schermi 160..167. Il tornello non si blocca mai: se l'hopper non da' tutto il resto
 arriva l'evento `gate_short_change` (dovuto/erogato/mancante in centesimi) e il cliente entra
 lo stesso; il non erogato resta credito per 2 minuti (`TRC`) e poi si azzera (riga
-"Credito scaduto" nelle transazioni). Livello basso dell'hopper = banconote spente, si paga
-solo con carta: non e' un guasto. Un `gate_short_change` = hopper da rifornire o inceppato.
+"Credito scaduto" nelle transazioni). Livello basso dell'hopper = schermo 161 "non da' resto,
+importo esatto": i contanti restano accettati, non e' un guasto. Un `gate_short_change` = hopper da rifornire o inceppato.
 
 ## Versioni (2026-11-05)
 - Firmware GMI piu' recente rilasciato: 4.20.90 (tutte le mod12 e i banchi).
