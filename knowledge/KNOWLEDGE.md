@@ -164,9 +164,21 @@ lo stesso; il non erogato resta credito per 2 minuti (`TRC`) e poi si azzera (ri
 "Credito scaduto" nelle transazioni). Livello basso dell'hopper = schermo 161 "non da' resto,
 importo esatto": banconote rifiutate, solo monete per l'importo esatto o carta, non e' un guasto. Un `gate_short_change` = hopper da rifornire o inceppato.
 
+### IP del Raspberry (PI_IP, SLIM-4.20.195)
+I Raspberry hanno IP fisso 192.168.9.97/.98/.99 dietro il router della macchina, e
+alcuni sono usciti con l'ultimo numero sbagliato. Dalla 195 il proprietario lo cambia
+dalla dashboard (chiave delicata `PI_IP`, campo mascherato: solo l'ultimo numero),
+senza riavvio del Pi. Evento `pi_ip` (from -> to) = cambio voluto, non un guasto; un
+calo di 2-3 s della rete in quel momento e' normale. `pi_ip_failed` = IP rimasto quello
+di prima (indirizzo gia' occupato da un altro apparecchio, router che non risponde col
+nuovo: in quel caso torna da solo al vecchio e non riprova per 24 ore): da segnalare al
+proprietario, non e' un problema della macchina. Un cambio di `host.ips` senza evento
+`pi_ip` invece e' anomalo (SD sostituita o modifica a mano).
+
 ## Versioni (2026-11-10)
 - Firmware GMI piu' recente: 4.20.93 (MOD10 tornello), su develop e mod10. 4.20.92 con
   SLIM-4.20.192 su develop/beta/mod5/mod12 dal 10/11.
+- Pi: SLIM-4.20.195 su develop dal 11/11 (PI_IP), non ancora sui canali.
 - Pi: SLIM-4.20.193 su develop e sul canale nuovo mod10 (totem del tornello, ancora
   nessuna macchina in campo). mod12 (Parma) e mod5: 192.
 - I branch delle macchine in campo (mod12, parma, beta2, mod5) ricevono il codice
