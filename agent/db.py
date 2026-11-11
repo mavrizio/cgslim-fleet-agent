@@ -19,12 +19,39 @@ def connect() -> psycopg.Connection:
     )
 
 
-def devices(conn) -> list[dict]:
+# Stato ridotto ai campi letti da checks.check_devices: i controlli girano ogni
+# 15 min e il free di Supabase conta il traffico in uscita (5 GB/mese). Lo stato
+# completo (~4 KB a macchina) serve solo al report giornaliero (daily.py).
+# Se check_devices legge un campo nuovo, aggiungerlo QUI.
+SLIM_STATUS = """
+        jsonb_strip_nulls(jsonb_build_object(
+          'runtime', jsonb_build_object(
+            'age_s', d.status #> '{runtime,age_s}',
+            'serial_missing', d.status #> '{runtime,serial_missing}',
+            'gmi_blocked', d.status #> '{runtime,gmi_blocked}',
+            'cashless', jsonb_build_object(
+              'chl_mode', d.status #> '{runtime,cashless,chl_mode}',
+              'p95_error', d.status #> '{runtime,cashless,p95_error}')),
+          'host', jsonb_build_object(
+            'throttled', d.status #> '{host,throttled}',
+            'cpu_temp_c', d.status #> '{host,cpu_temp_c}',
+            'disk_free_mb', d.status #> '{host,disk_free_mb}',
+            'clock_skew_s', d.status #> '{host,clock_skew_s}'),
+          'app', jsonb_build_object('updater', jsonb_build_object(
+            'ok', d.status #> '{app,updater,ok}',
+            'failures', d.status #> '{app,updater,failures}',
+            'error', d.status #> '{app,updater,error}'))
+        ))"""
+
+
+def devices(conn, slim: bool = False) -> list[dict]:
+    """slim=True: solo i campi di stato usati dai controlli periodici (vedi SLIM_STATUS)."""
+    status = SLIM_STATUS if slim else "d.status"
     return conn.execute(
-        """
+        f"""
         select d.device_id, d.mhd, d.hostname, d.label, d.location, d.app_version,
                d.fw_version, d.git_branch, d.git_commit, d.app_running, d.last_seen, d.last_reason,
-               d.status, d.device_key_status, d.config_key_status,
+               {status} as status, d.device_key_status, d.config_key_status,
                extract(epoch from now() - d.last_seen)::int as age_s,
                r.center, r.battery
           from devices d

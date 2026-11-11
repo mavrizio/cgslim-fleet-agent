@@ -29,7 +29,7 @@ def _fmt(f: checks.Finding) -> str:
 
 def cmd_check(args) -> int:
     with db.connect() as conn:
-        devices = db.devices(conn)
+        devices = db.devices(conn, slim=True)
         events = db.events(conn, hours=6)
     devices, events = checks.production_only(devices, events)
     findings = checks.run_all(devices, events, CHECK_WINDOW_H) + checks.check_server()
@@ -58,7 +58,7 @@ def cmd_check(args) -> int:
 
 def cmd_status(args) -> int:
     with db.connect() as conn:
-        devices = db.devices(conn)
+        devices = db.devices(conn, slim=True)
         events = db.events(conn, hours=24)
     devices, events = checks.production_only(devices, events)
     findings = checks.run_all(devices, events, 24)
