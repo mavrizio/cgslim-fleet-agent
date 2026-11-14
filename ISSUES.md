@@ -1,90 +1,91 @@
 # Registro problemi flotta CGSLIM
 
-Aggiornato dall'agente il 13/11/2026 10:02. Una voce per causa; MHD senza zeri. Generato: non modificare a mano.
+Aggiornato dall'agente il 14/11/2026 10:03. Una voce per causa; MHD senza zeri. Generato: non modificare a mano.
 
 ## Aperti
 
 <a id="cg-003"></a>
 
-### CG-003 · POS DISCONNECTED dopo timeout get_advanced_config: 24350, 37008, 33326 e 23718 al nono giorno, anche con le release 200-202
+### CG-003 · POS DISCONNECTED dopo timeout get_advanced_config: 24350, 37008, 33326 e 23718 al decimo giorno, anche con la 205
 
-- **Area:** pi · **Gravita':** high · **Visto:** 2026-10-31 → 2026-11-13
-- **Macchine:** 24350, 37008, 33326, 23718, 11223344, 11155520, 11223355, 1470000, 54124120, 58547455, 58555555, 58888999, 24866, 33957, 36842, 24254, 32996, 24338, 28418, 25254, 21784
-- **Prove:** Avviso 'POS in errore su 11 macchine' aperto dal 10/11.
-Macchine in campo/beta alle 09:5x di oggi, tutte DISCONNECTED con 'Timeout locale get_advanced_config':
-- 24350: riavviata alle 06:11 e alle 09:11, ancora DISCONNECTED; nessun dato P95 letto e nessuna transazione nelle 24 h.
-- 37008: 10 vendite cash, nessuna carta.
-- 33326: DISCONNECTED anche con la SLIM-4.20.202.
-- 23718: 1 carta annullata alle 14:50.
-Pi di banco DISCONNECTED: 1470000, 11155520, 11223344, 11223355, 58547455, 58555555, 58888999; 54124120 offline.
-'Connessione persa durante get_advanced_config', tutte rientrate entro 15 min (orari locali):
-- 12/11: 21784 alle 10:32, 36842 alle 11:47, 24866 e 25254 alle 13:47, 24338 alle 16:02 e alle 17:02, 28418 alle 17:32;
-- 13/11: 32996 e 33957 alle 09:17.
-- **Ipotesi:** Dopo un timeout della lettura cashless_info il pos-engine resta DISCONNECTED senza ritentare; le release 199-202 non cambiano il comportamento. I 'Connessione persa' sono transitori legati agli avvii.
+- **Area:** pi · **Gravita':** high · **Visto:** 2026-10-31 → 2026-11-14
+- **Macchine:** 24350, 37008, 33326, 23718, 11223344, 11155520, 11223355, 1470000, 54124120, 58547455, 58555555, 58888999, 24866, 33957, 36842, 24254, 32996, 24338, 28418, 25254, 21784, 25158
+- **Prove:** Avviso 'POS in errore su 4 macchine' aperto dal 10/11 (il banco offline non e' piu' contato).
+Online e DISCONNECTED con 'Timeout locale get_advanced_config':
+- 24350 (199): nessun dato P95 letto; 6 transazioni ieri, 5 cash approvate e 1 carta annullata.
+- 37008 (199): 14 vendite cash, nessuna carta.
+- 33326 (205): ferma anche dopo 203, 204 e 205.
+- 23718 (205): 1 vendita cash.
+Il banco (8 Pi) era DISCONNECTED all'ultimo report, ieri alle 15:2x.
+'Connessione persa durante get_advanced_config', tutte rientrate entro 15 minuti (orari locali):
+- 13/11: 28418 alle 11:47 e alle 13:47, 36842 alle 13:47;
+- 14/11: 32996 alle 09:17 e 25158 alle 09:32, subito dopo il serial_recovery.
+- **Ipotesi:** Dopo un timeout della lettura cashless_info il pos-engine resta DISCONNECTED senza ritentare. Le release 199-205 non cambiano il comportamento. I 'Connessione persa' sono transitori legati agli avvii.
 - **Proposta:** Maurizio:
 - un errore di get_advanced_config non deve bloccare il P95: saltare la lettura e ritentarla con backoff;
 - nascondere la carta a POS DISCONNECTED;
-- log pos-engine della 24350 dopo le 09:11 di oggi.
+- log pos-engine della 24350 dopo il boot delle 09:11 di oggi.
 Campo Parma: spegnere e riaccendere il POS della 24350 e provare una carta.
 Dashboard: escludere i Pi di banco dall'avviso.
 - **Gia' noto:** POS: get_advanced_config; IP del Raspberry (bug 195 su POS dopo PI_IP)
 
 <a id="cg-009"></a>
 
-### CG-009 · 24254 (Aprilia): ieri spenta 09:47-12:58 e di nuovo dalle 19:47; stamattina non accesa
+### CG-009 · 24254 (Aprilia): accesa solo dalle 11:04 alle 19:53 ieri, oggi alle 09:50, con sottotensione
 
-- **Area:** campo · **Gravita':** high · **Visto:** 2026-11-02 → 2026-11-13
+- **Area:** campo · **Gravita':** high · **Visto:** 2026-11-02 → 2026-11-14
 - **Macchine:** 24254
-- **Prove:** 12/11:
-- 09:16: accesa;
-- 09:47: sottotensione ADESSO, poi nessun report fino alle 12:58;
-- 13:00: reboot (uptime 138);
-- sottotensione a piu' riprese nel pomeriggio;
-- 19:47: ultimo report.
-13/11: alle 10:00 offline da 852 minuti, mentre le altre Aprilia si sono accese tra le 05:41 e le 07:30.
-Nessuna transazione nelle 24 h; ultima carta approvata il 05/11.
-- **Ipotesi:** Alimentazione interrotta o insufficiente: presa, timer o alimentatore. La sottotensione precede le perdite di corrente. Non confermato.
-- **Proposta:** Campo Aprilia, oggi:
-- verificare se la macchina e' alimentata, la presa e il timer;
+- **Prove:** 13/11:
+- 11:04: reboot (uptime 139);
+- sottotensione ADESSO in 10 episodi tra le 11:17 e le 19:47;
+- 19:53: ultimo report;
+- 1 sola vendita cash, alle 17:16.
+14/11:
+- 09:50: reboot (uptime 138), mentre le altre Aprilia si sono accese tra le 05:41 (24866) e le 07:30 (26087);
+- throttled 0x50005 alle 09:51.
+Ultima carta approvata il 05/11.
+Gli spegnimenti serali sono sempre intorno alle 19:47-19:58 (anche il 12/11 alle 19:47).
+- **Ipotesi:** Due cose insieme. 1) La macchina sembra su una linea o un timer diverso dalle altre Aprilia: accensione tarda e spegnimento verso le 19:50 tutti i giorni. 2) L'alimentatore del Pi e' debole. Non confermato.
+- **Proposta:** Campo Aprilia:
+- verificare presa, linea e timer (confronto con 24866/26087);
 - sostituire l'alimentatore del Pi;
-- fare una vendita di prova.
-Maurizio: journal e dmesg del 12/11 attorno alle 09:47 e alle 19:47, appena torna online.
+- fare una vendita di prova con carta.
+Maurizio: journal e dmesg attorno alle 19:47-19:53 del 12 e del 13/11.
 
 <a id="cg-004"></a>
 
-### CG-004 · Seriale GMI assente all'accensione (FTDI non enumerato), cavi lotto BG03E: oggi sia 25158 sia 32996
+### CG-004 · Seriale GMI assente all'accensione (FTDI non enumerato), cavi lotto BG03E: 25158 e 32996 anche oggi
 
-- **Area:** hardware · **Gravita':** medium · **Visto:** 2026-11-01 → 2026-11-13
+- **Area:** hardware · **Gravita':** medium · **Visto:** 2026-11-01 → 2026-11-14
 - **Macchine:** 25158, 32996
-- **Prove:** 13/11:
-- 32996 (BG03ER1N): 09:04 reboot (uptime 113), 'could not open port /dev/ttyUSB0', serial_missing not_enumerated (sul bus solo hub, ethernet e ILITEK); 09:08 reboot di recovery (uptime 45); 09:09 serial_recovery.
-- 25158 (BG03ES5F): 09:22 stesso schema; 09:26 reboot; 09:27 serial_recovery.
-La 25158 e' a 7 mattine su 8 (06, 08, 09, 10, 11, 12 e 13/11).
-Vendite ieri: 32996 6 transazioni (5 approvate), 25158 3 (1 approvata).
-Anche la 25254 (cavo AL05ZNNI) ha avuto serial_missing il 12/11 alle 11:49, rientrato dopo 5 s, durante l'installazione con l'ST-Link: non conta.
+- **Prove:** 14/11:
+- 32996 (BG03ER1N): alle 09:04 reboot (uptime 113), 'could not open port /dev/ttyUSB0', serial_missing not_enumerated (sul bus solo hub, ethernet e ILITEK); alle 09:08 reboot di recovery (uptime 45); alle 09:09 serial_recovery.
+- 25158 (BG03ES5F): alle 09:26 reboot (uptime 50); alle 09:27 serial_recovery not_enumerated.
+Su entrambe un 'Connessione persa get_advanced_config' subito dopo, rientrato.
+La 25158 e' a 8 mattine su 9 (06 e dall'08 al 14/11).
+Vendite 24 h: 25158 7 (5 approvate), 32996 7 (6 approvate, l'ultima alle 09:54 di oggi).
 Cavo della 25158 non ancora scambiato.
-- **Ipotesi:** Lotto FT232R BG03E e/o alimentazione a ritroso dalla GMI. Il recovery funziona e costa circa 5 minuti.
+- **Ipotesi:** Lotto FT232R BG03E e/o alimentazione a ritroso dalla GMI. Il recovery funziona e costa circa 5 minuti al mattino.
 - **Proposta:** Campo Parma: scambiare il cavo della 25158 con uno AL05 e lasciare la 32996 come controllo.
 Pi: nel prossimo rilascio riavvio anticipato (~30-40 s), uhubctl e TX della GMI in high-Z.
 - **Gia' noto:** Seriale assente al mattino (serial_missing, not_enumerated)
 
 <a id="cg-005"></a>
 
-### CG-005 · Sottotensione del Raspberry: 24349 e 24254 a episodi tutto il giorno, 23718 fissa
+### CG-005 · Sottotensione del Raspberry: 24349 e 24254 a episodi tutto il giorno (24349 ora silente), 23718 fissa
 
-- **Area:** hardware · **Gravita':** medium · **Visto:** 2026-11-01 → 2026-11-13
+- **Area:** hardware · **Gravita':** medium · **Visto:** 2026-11-01 → 2026-11-14
 - **Macchine:** 24349, 23718, 24254, 24350, 24338
-- **Prove:** Avvisi undervoltage_now del 12/11, orari locali:
-- 24349: circa 12 episodi (09:32, 10:17, 11:17-11:32, 12:32, 13:17, 14:02, 15:17-16:02, 17:02, 19:17-20:32, 21:47, 22:47). Oggi throttled 0x50005 alle 09:49, a circa 30 minuti dal boot delle 09:17.
-- 24254: 09:47 e poi a piu' riprese dalle 13:32 fino all'arresto delle 19:47.
+- **Prove:** Avvisi undervoltage_now del 13/11, orari locali:
+- 24349: circa 11 episodi (10:02, 10:47, 12:02, 13:17, 15:32, 17:47, 19:02, 19:47, 20:32, 22:02, 23:02). Oggi reboot alle 09:17, 0x50005 nel report delle 09:19, poi nessun report (offline da 41 minuti alle 10:00).
+- 24254: 10 episodi tra le 11:17 e le 19:47 (11:17, 11:47, 12:47, 13:47, 14:47, 15:32, 17:02, 17:47, 19:02, 19:47). Oggi 0x50005 gia' a 201 s dal boot delle 09:50.
 - 23718: 0x50005 fissa, avviso aperto dal 03/11.
-- 24350 e 24338: 0x50000.
-- 11223355 (banco): oggi 0x0.
-- **Ipotesi:** Alimentatori o cavi deboli. Sulla 24254 probabilmente legata anche agli spegnimenti (CG-009).
+- 24350 (dal boot delle 09:11) e 24338: 0x50000.
+- **Ipotesi:** Alimentatori o cavi deboli. Sulla 24349 il silenzio dopo le 09:19 potrebbe essere un blocco o un riavvio da brown-out (non confermato). Sulla 24254 probabilmente legata anche agli spegnimenti (CG-009).
 - **Proposta:** Hardware/campo, in ordine:
-1. 24254 (insieme a CG-009).
-2. 24349.
-3. 23718.
+1. 24254, insieme a CG-009;
+2. 24349, oggi: verificare se e' accesa e cambiare alimentatore/cavo;
+3. 23718;
 4. 24350 e 24338.
 - **Gia' noto:** host.throttled 0x50000 (scheda campi); sottotensione sospettata nei flash GMI falliti
 
@@ -107,18 +108,19 @@ Maurizio: nascondere la carta con TID 00000000 o senza acquirer.
 
 <a id="cg-012"></a>
 
-### CG-012 · POS non pronto dopo l'avvio o dopo un codice 90: 'activate gia' in corso', Broken pipe, rifiuti codice 31
+### CG-012 · POS non pronto dopo l'avvio o dopo un codice 90; rifiuti codice 31 a raffica sulla 33957
 
-- **Area:** pi · **Gravita':** medium · **Visto:** 2026-11-04 → 2026-11-12
+- **Area:** pi · **Gravita':** medium · **Visto:** 2026-11-04 → 2026-11-13
 - **Macchine:** 24254, 28418, 33957, 24866, 29597, 23718, 58888999, 33089, 25356
-- **Prove:** 12/11:
-- 33089 (nuova): 'Operazione activate gia' in corso' alle 17:02 e un pagamento in errore 'Broken pipe' alle 16:45; ultima approvata alle 17:59.
-- 33957: 'POS riattivato dopo codice 90' alle 11:15, poi 4 rifiuti 'codice 31' tra le 11:15 e le 11:17; 8 approvate nella giornata.
-- 25356: carta approvata dopo 'POS riattivato dopo codice 90' (~14:18).
-- **Ipotesi:** Corsa all'avvio tra activate, lettura cashless_info e pagamento. Il codice 31 subito dopo il recupero da codice 90 potrebbe essere legato al terminale appena riattivato. Non confermato.
+- **Prove:** 13/11, 33957: 3 rifiuti 'codice 31' (2 alle 16:26, 1 alle 16:27). Nelle 24 h 22 transazioni, 19 approvate (18 cash, 4 carta), ultima alle 09:41 di oggi. Nei dati non c'e' un codice 90 prima dei rifiuti (card_activity ok 1, ko 3).
+Nessun 'activate gia' in corso' o Broken pipe nelle 24 h.
+12/11, gia' registrato:
+- 33089: Broken pipe alle 16:45 e activate gia' in corso alle 17:02;
+- 33957: codice 31 dopo il codice 90 delle 11:15.
+- **Ipotesi:** La corsa all'avvio (activate/cashless_info/pagamento) resta possibile. Il codice 31 si ripete senza codice 90: potrebbe essere un rifiuto lato banca/emittente della stessa carta ritentata, non legato al recupero del POS. Non confermato.
 - **Proposta:** Maurizio:
 - carta disabilitata finche' il POS non e' IDLE e cashless_info non ha finito;
-- verificare il significato del codice 31 dopo il recupero da codice 90.
+- verificare con Ingenico/acquirer il significato del codice 31 e se arriva sempre dalla stessa carta.
 - **Gia' noto:** POS: get_advanced_config (operazione gia' in corso)
 
 <a id="cg-019"></a>
@@ -143,84 +145,76 @@ Tutte ora a 4.20.93, bootloader V2.
 
 <a id="cg-020"></a>
 
-### CG-020 · Telemetria assente per ore con DNS non risolto mentre la macchina vende: 24350 e 33957
+### CG-020 · Telemetria assente per ore con DNS/rete KO mentre la macchina vende: 24350 e 33957 (anche ieri), forse 21784
 
-- **Area:** hardware · **Gravita':** medium · **Visto:** 2026-11-11 → 2026-11-13
-- **Macchine:** 24350, 33957
-- **Prove:** 24350, 12/11:
-- 'Could not resolve host gitlab-dev' a ripetizione (11:18, 12:35, 13:07, 13:30, 14:10, 15:06, 15:55, 16:28, 17:02, 17:45, 20:28, 22:02);
-- offline a tratti (ultimi report 10:20, 11:18, 14:25, 15:06, 20:37).
-24350, 13/11:
-- reboot alle 06:11, ultimo report alle 06:12;
-- nuovo reboot alle 09:11 (uptime 140);
-- nessuna transazione nelle 24 h.
+- **Area:** hardware · **Gravita':** medium · **Visto:** 2026-11-11 → 2026-11-14
+- **Macchine:** 24350, 33957, 21784
+- **Prove:** 24350:
+- 13/11: ultimo report alle 11:21, dopo update_failed 'Could not resolve host';
+- nessun report fino al boot delle 09:11 di oggi, ma 6 transazioni ieri tra le 17:16 e le 23:47.
 33957 (Carpi):
-- nessun report dalle 10:17 del 12/11 alle 09:06 di oggi, ma 14 transazioni ieri tra le 10:08 e le 18:53;
-- alle 09:06 update_failed 'Could not resolve host', subito recuperato.
-Separato: 502 di gitlab-dev alle 07:37 su 4 macchine, lato server, rientrato in 1 minuto.
-- **Ipotesi:** Router o SIM che perdono DNS o dati per ore; le transazioni arrivano in coda. Sulla 24350 il doppio avvio di stamattina fa pensare anche a corrente instabile. Non confermato.
-- **Proposta:** Campo Parma: controllare router e SIM della 24350 (log 12/11).
+- 13/11: ultimo report alle 12:57;
+- update_failed 'Could not resolve host' da ieri sera circa alle 20:35;
+- update_recovered e reboot alle 09:29 di oggi;
+- intanto 22 transazioni, dalle 11:14 di ieri alle 09:41 di oggi.
+21784: report a singhiozzo ieri (10:28, 19:01, 19:49), updater 'Couldn't connect'.
+- **Ipotesi:** Router o SIM che perdono DNS o dati per ore; le transazioni arrivano in coda. Si ripete ogni giorno su 24350 e 33957. Non confermato.
+- **Proposta:** Campo Parma: controllare router e SIM della 24350.
 Campo Carpi: idem per la 33957.
-Maurizio: verificare timestamp di inserimento delle transazioni e il retry del fleet-reporter senza rete.
+Maurizio:
+- verificare i timestamp di inserimento delle transazioni;
+- retry del fleet-reporter senza rete;
+- report anche quando il DNS fallisce.
 - **Gia' noto:** Aggiornamenti bloccati (update_failed, rete/SIM)
 
-<a id="cg-021"></a>
+<a id="cg-023"></a>
 
-### CG-021 · Installazione Tiburtino Guidonia (12/11): 7 macchine nuove online e in vendita; chiave 25355 in mismatch, versioni ballerine sulla 33089
+### CG-023 · 36842 (Parma): riavvii completi a meta' giornata (13/11 alle 13:33; 12/11 alle 11:41 e alle 12:35)
 
 - **Area:** campo · **Gravita':** medium · **Visto:** 2026-11-12 → 2026-11-13
-- **Macchine:** 33089, 25254, 25355, 25356, 25357, 33090, 33180
-- **Prove:** 12/11, first_seen: 33089 alle 10:27, 25254 alle 11:14, 25357 alle 12:56, 25356 alle 13:59, 25355 alle 14:27, 33090 alle 15:35, 33180 alle 16:10.
-Oggi tutte su SLIM-4.20.200, fw 4.20.93, ramo mod5, riaccese tra le 06:51 e le 08:54.
-Vendite 24 h: 25254 11 (9 approvate), 33180 10/10, 33089 8 (3), 25357 7 (3), 25356 5 (4), 33090 4 (3).
-33089:
-- reboot_storm (5 in 6 h), version_change 199->192->199->200->199->200 tra le 10:57 e le 13:44;
-- mismatch della chiave dalle 10:58.
-25355: device_key_status mismatch, avviso aperto dalle 07:17.
-25254: orologio sfasato di -38365 s alle 07:47, dopo il boot delle 07:45, rientrato entro 15 min.
-- **Ipotesi:** Durante l'installazione sono state scambiate o riscritte delle SD (golden): da qui il rientro alla 192 e le chiavi in mismatch. L'orologio sfasato e' il Pi senza RTC prima della sincronizzazione NTP. Non confermato.
-- **Proposta:** Maurizio/dashboard: re-enroll della chiave della 25355.
-Campo Tiburtino: confermare quale SD e' montata su 33089 e 25355.
-Verificare la carta sulla 33180 (CG-014).
-Test linea 8.4 su tutte.
-- **Gia' noto:** Profilo display auto / golden SD; GMI 'muta' / NCG senza bootloader
+- **Macchine:** 36842
+- **Prove:** 13/11 alle 13:33: reboot con uptime 136, app_restart e coppia gmi_hostlink. La macchina vendeva gia' dalle 10:53: 12 transazioni tra le 10:53 e le 23:55, 11 approvate.
+12/11: riavvii fuori orario alle 11:41 (uptime 135) e alle 12:35 (uptime 66), allora attribuiti a un intervento.
+Nessun FAULT_REPORT o eccezione nelle 24 h. Throttled oggi 0x0. Riaccensione normale alle 09:09 di oggi.
+- **Ipotesi:** Un uptime di ~135 s indica un avvio completo (Pi riacceso), quindi probabilmente un'interruzione di corrente della macchina o un intervento sul posto. Lo storico (stop del 31/10, sottotensione passata) fa pensare all'alimentazione. Non confermato.
+- **Proposta:** Campo Parma: chiedere se il 13/11 alle 13:33 c'e' stato un intervento; altrimenti controllare presa, alimentatore e timer.
+Maurizio: journal e dmesg prima delle 13:33 del 13/11 (last reboot, sottotensione).
 
 <a id="cg-011"></a>
 
-### CG-011 · Dashboard: chiave 25355 in mismatch, centro null su 6 macchine, Pi di banco nel conteggio
+### CG-011 · Dashboard: centro null su 6 macchine, Pi di banco nel conteggio (chiave 25355 rientrata)
 
-- **Area:** dashboard · **Gravita':** low · **Visto:** 2026-11-04 → 2026-11-13
-- **Macchine:** 21784, 23718, 24338, 28418, 33326, 37008, 25355
-- **Prove:** - 25355: device_key_enrolled alle 14:28 di ieri e device_key_mismatch alle 16:08; avviso riaperto oggi alle 07:17, device_key_status 'mismatch'.
-- 33089: mismatch dalle 10:58 alle 14:47 di ieri, poi rientrato.
-- Centro null: 21784, 23718, 24338, 28418, 33326 e 37008.
-- Conteggio flotta 38: comprende 8 Pi di banco e il Pi senza MHD 4f2f67b8.
-- **Ipotesi:** Il mismatch nasce probabilmente dallo scambio o dalla clonazione delle SD durante l'installazione (golden). Non confermato.
+- **Area:** dashboard · **Gravita':** low · **Visto:** 2026-11-04 → 2026-11-14
+- **Macchine:** 21784, 23718, 24338, 28418, 33326, 37008
+- **Prove:** Chiavi:
+- 25355: device_key_enrolled ieri alle 11:15, avviso mismatch chiuso alle 11:17, oggi device_key_status 'ok';
+- 23718: device_key_enrolled alle 11:24.
+Centro null: 21784, 23718, 24338, 28418, 33326 e 37008.
+Conteggio flotta 38: comprende 8 Pi di banco e il Pi senza MHD 4f2f67b8 (device_key 'missing').
+- **Ipotesi:** Il mismatch nasceva dallo scambio o dalla clonazione delle SD durante l'installazione. Il re-enroll l'ha sistemato.
 - **Proposta:** Dashboard/Maurizio:
-- riallineare la chiave della 25355;
 - assegnare il centro (o 'banco');
 - escludere i device di banco da conteggio e avvisi.
-- **Gia' noto:** Profilo display auto / golden SD; IP del Raspberry (PI_IP)
+- **Gia' noto:** Profilo display auto / golden SD
 
 <a id="cg-014"></a>
 
-### CG-014 · MOD non documentate: 23718 mod 4 (prima mod 1), 33180 mod 2 con MDB non inizializzato
+### CG-014 · MOD non documentate: 23718 mod 4 (ora su beta), 33180 mod 2 senza cashless
 
-- **Area:** firmware · **Gravita':** low · **Visto:** 2026-11-05 → 2026-11-13
+- **Area:** firmware · **Gravita':** low · **Visto:** 2026-11-05 → 2026-11-14
 - **Macchine:** 23718, 33180
-- **Prove:** MOD 12 sul ramo mod5 e' una configurazione normale: e' cosi' su tutte le Tiburtino e su 21784. La 24866 e' esclusa.
-23718 (branch mod5):
-- ieri mod 1, oggi mod 4, schermata 21, tramogge 0,1,1;
-- 1 carta annullata, nessuna vendita;
-- POS DISCONNECTED, uptime 242176 s.
-33180 (Tiburtino, nuova):
-- mod 2, schermata 40, tramogge 1,0,0, chl_mode 2;
-- MDB indirizzi 10 e 60 con init false, pos-engine inactive;
-- 10 vendite cash ieri (17:09-18:41).
-- **Ipotesi:** 23718 e' una macchina di prova riconfigurata. 33180 potrebbe essere configurata per il solo contante, o avere il lettore MDB non collegato. Non confermato.
-- **Proposta:** Maurizio: chiarire le MOD 1, 2 e 4 nella scheda.
-Campo Tiburtino: dire se la 33180 deve avere la carta (lettore MDB presente?).
-Dire se la 23718 e' in servizio.
+- **Prove:** 23718:
+- 13/11: provisioning GIT_BRANCH applicato alle 11:40, passata da mod5 a beta, poi 203, 204 e 205 con fw fino a 4.20.98;
+- oggi mod 4, schermata 21, tramogge 0,1,1, POS DISCONNECTED;
+- 1 vendita cash alle 12:34;
+- reboot alle 12:24 (uptime 136) e app_restart_storm (5 in 6 h, dovuta al rollout).
+33180:
+- mod 2, schermata 40, tramogge 1,0,0, chl_mode ora 0 (era 2), pos null, pos-engine inactive;
+- MDB 10 e 60 con init false;
+- 6 vendite cash ieri.
+- **Ipotesi:** 23718 e' una macchina di prova riconfigurata, ora usata per la beta. 33180 sembra configurata per il solo contante (chl_mode 0). Non confermato.
+- **Proposta:** Maurizio: chiarire le MOD 1, 2 e 4 nella scheda e dire se la 23718 e' di laboratorio.
+Campo Tiburtino: confermare che la 33180 deve essere solo contante.
 
 <a id="cg-015"></a>
 
@@ -270,47 +264,64 @@ Maurizio: inviare i contatori come delta giornaliero.
 
 <a id="cg-018"></a>
 
-### CG-018 · Preparazione macchine al banco: 8 Pi con MHD provvisori, 21784 tornata online, 54124120 con rete instabile
+### CG-018 · Preparazione macchine al banco: banco spento da ieri pomeriggio, 21784 offline dalle 19:49
 
-- **Area:** campo · **Gravita':** low · **Visto:** 2026-11-09 → 2026-11-13
+- **Area:** campo · **Gravita':** low · **Visto:** 2026-11-09 → 2026-11-14
 - **Macchine:** 11223344, 11223355, 11155520, 1470000, 54124120, 58547455, 58555555, 58888999, 21784, CG-4F2F67B8
-- **Prove:** 21784:
-- 12/11 10:20 tornata online, poi SLIM-4.20.199 e 200; 2 vendite approvate (ultima alle 17:32);
-- offline dalle 20:01 alle 09:54 di oggi (reboot uptime 421);
-- MDB SELF/2000 + P95 con TID 75501208, centro null.
-54124120:
-- report a singhiozzo tutta la notte;
-- update_failed 'Couldn't connect' e 'Could not resolve host' (10:40, 11:59, 23:23, 02:28);
-- offline dalle 08:41.
-11223344 e' passata sulla beta: 202 e fw 4.20.95.
-Il Pi senza MHD 4f2f67b8 e' offline dall'11/11 08:54.
-- **Ipotesi:** Lotto in preparazione; la rete LTE del banco e' instabile (54124120).
+- **Prove:** Banco offline:
+- 11223344, 11155520, 11223355, 1470000, 58547455, 58555555 e 58888999 offline dalle 15:18-15:26 di ieri, tutti insieme;
+- 54124120 dalle 13:20, con updater 'Couldn't connect';
+- 11223344 ferma a SLIM-4.20.204 e fw 4.20.97.
+21784:
+- 12 transazioni ieri tra le 11:42 e le 19:15, 11 approvate;
+- offline alle 10:28 e alle 19:01 (rientrata), poi definitivamente dalle 19:49 con updater 'Failed to connect' (2 fallimenti);
+- alle 10:00 non ancora tornata.
+Pi senza MHD 4f2f67b8 offline dall'11/11 08:54.
+- **Ipotesi:** Banco spento per il fine settimana. 21784: rete instabile o accensione tardiva; non e' noto dove si trovi.
 - **Proposta:** Maurizio/campo: MHD definitivi, centro e TID distinti prima della spedizione; test linea 8.4 su tutte.
-Dire se la 21784 e' gia' in campo e dove.
+Dire dove si trova la 21784.
 Dashboard: marcare 'banco'.
 - **Gia' noto:** GMI 'muta' / NCG senza bootloader (menu 9.5 ST-Link); golden SD (CG-<seriale>)
 
 <a id="cg-022"></a>
 
-### CG-022 · gmi_hostlink locked per 1-2 minuti a macchina accesa, senza riavvio, su 8 macchine
+### CG-022 · gmi_hostlink locked per 1-2 minuti a macchina accesa, senza riavvio: ieri solo 32995
 
-- **Area:** pi · **Gravita':** low · **Visto:** 2026-11-12 → 2026-11-12
-- **Macchine:** 24349, 25158, 36842, 24338, 28418, 23718, 32996, 25157, 28419
-- **Prove:** 12/11, coppie locked/unlocked senza reboot ne' app_restart:
-- 24349: 11:03-11:05;
-- 25158: 11:34-11:35;
-- 36842: 11:56-11:57;
-- 24338 e 28418: 12:59-13:01, nello stesso minuto;
-- 23718: 13:03-13:04;
-- 32996: 15:13;
-- 25157: 16:08-16:09;
-- 28419: 16:41-16:42.
+- **Area:** pi · **Gravita':** low · **Visto:** 2026-11-12 → 2026-11-13
+- **Macchine:** 24349, 25158, 36842, 24338, 28418, 23718, 32996, 25157, 28419, 32995
+- **Prove:** 13/11: 32995 locked alle 12:42 e unlocked alle 12:43, senza reboot ne' app_restart. E' l'unico caso nelle 24 h.
+12/11: 9 macchine (24349, 25158, 36842, 24338/28418, 23718, 32996, 25157, 28419).
 Le coppie agli avvii e ai rollout sono normali e non sono incluse.
-- **Ipotesi:** Il main loop del Pi resta fermo oltre 20 s; per circa un minuto banconote, monete e carta sono chiusi. Causa ignota: forse una chiamata bloccante (lettura POS, rete). Non confermato.
+- **Ipotesi:** Il main loop del Pi resta fermo oltre 20 s (forse una chiamata bloccante POS o rete). La frequenza e' scesa, ma la causa resta ignota.
 - **Proposta:** Maurizio:
-- nei log di 24349 e 25158 cercare cosa fa il main loop in quei minuti;
+- nei log di 32995 (12:42 di ieri) e di 24349/25158 cercare cosa fa il main loop;
 - aggiungere all'evento la durata del blocco e l'ultima riga inviata.
 - **Gia' noto:** Pagamenti bloccati perche' la GMI non sente il Pi (evento gmi_hostlink)
+
+## In osservazione
+
+<a id="cg-021"></a>
+
+### CG-021 · Installazione Tiburtino Guidonia: 7 macchine in vendita, chiave 25355 sistemata; 25356 e 25357 senza vendite approvate ieri
+
+- **Area:** campo · **Gravita':** low · **Visto:** 2026-11-12 → 2026-11-14
+- **Macchine:** 33089, 25254, 25355, 25356, 25357, 33090, 33180
+- **Prove:** Oggi tutte online: SLIM-4.20.200, fw 4.20.93, ramo mod5. Riaccese tra le 06:51 (25356) e le 08:54 (33090); 33089 stabile (reboot alle 07:58).
+25355: chiave re-enrolled alle 11:15 di ieri, status ok.
+Vendite 24 h:
+- 33090: 9 (7 approvate);
+- 25355: 6 (5);
+- 33180: 6 (6);
+- 33089: 4 (3);
+- 25254: 3 (2);
+- 25356: 1 carta annullata;
+- 25357: 1 carta annullata.
+25356 e 25357 sono IDLE con il POS connesso.
+- **Ipotesi:** Installazione assestata. Le poche vendite su 25356 e 25357 sono probabilmente dovute al traffico. Non confermato.
+- **Proposta:** Campo Tiburtino:
+- vendita di prova su 25356 e 25357;
+- test linea 8.4 su tutte.
+- **Gia' noto:** Profilo display auto / golden SD; GMI 'muta' / NCG senza bootloader
 
 ## Risolti
 
@@ -333,19 +344,22 @@ Ora: POS IDLE connesso, GMI fe=3 (era 138). Resta throttled 0x50005, con sottote
 
 <a id="cg-001"></a>
 
-### CG-001 · Aggiornamento firmware GMI: rollout beta 4.20.94/4.20.95 pulito, voce chiusa
+### CG-001 · Aggiornamento firmware GMI: rollout beta 4.20.94-4.20.98 pulito, voce chiusa
 
 - **Area:** firmware · **Gravita':** low · **Visto:** 2026-10-30 → 2026-11-10
-- **Macchine:** 26087, 33326, 24338
-- **Prove:** 12/11, rollout beta, nessun gmi_flash_failed:
-- 11223344: 4.20.94 alle 15:08, 4.20.95 alle 16:32;
-- 33326: 4.20.94 alle 15:16, 4.20.95 alle 17:21; RDY atteso alle 15:13 durante il flash;
-- 28418: alle 15:22 e alle 17:27;
-- 24338: alle 15:54 e alle 17:00.
-Sulle GMI Tiburtino il passaggio da RDY al flash seriale e' riuscito (es. 25254 alle 11:53-11:54).
-26087: 8 vendite ieri, nessun problema dal 10/11.
-- **Ipotesi:** La corruzione del 10/11 sulla 26087 era un disturbo occasionale.
-- **Proposta:** Chiusa. Resta valido non segnalare come eccezione il RDY durante un flash pianificato. Riaprire se ricompare un gmi_flash_failed.
+- **Macchine:** 26087, 33326, 24338, 28418, 23718
+- **Prove:** 13/11, rollout beta in tre passi, nessun gmi_flash_failed:
+- 203 + fw 4.20.96 tra le 11:19 e le 12:04;
+- 204 + 4.20.97 tra le 13:15 e le 14:10;
+- 205 + 4.20.98 tra le 15:29 e le 16:16.
+Macchine: 33326, 28418, 23718 e 24338 (11223344 fino a 204/4.20.97).
+RDY loggato durante i flash, ogni volta seguito dal fw_change entro 2-5 minuti:
+- 33326 alle 11:25 e alle 15:32;
+- 28418 alle 11:31 e alle 15:41;
+- 23718 alle 11:46 e alle 13:29.
+33326: app_down alle 15:32, fw 4.20.98 alle 15:46, avviso chiuso alle 16:17.
+- **Ipotesi:** La corruzione del 10/11 sulla 26087 era un disturbo occasionale. I RDY sono la fase normale del flash.
+- **Proposta:** Chiusa. Non segnalare il RDY durante un flash pianificato. Riaprire se compare un gmi_flash_failed.
 - **Gia' noto:** Aggiornamento firmware GMI che fallisce (gmi_flash_failed, gmi_blocked, loop RDY)
 
 <a id="cg-007"></a>
