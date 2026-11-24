@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 import anthropic
 import markdown as md
 
-from . import checks, db, state
+from . import checks, db, notes, state
 from . import config as cfg
 
 ROME = ZoneInfo("Europe/Rome")
@@ -53,6 +53,18 @@ Il tuo lavoro:
    ma e' presto per chiuderla.
 4. Distinguere fatti e ipotesi. Ogni affermazione sulle macchine deve venire dai dati forniti;
    cita MHD (senza zeri iniziali), orari e numeri. Se un dato manca, dillo.
+5. Tenere conto delle note di Maurizio (sezione "Note dello sviluppatore"): spiegazioni,
+   giustificazioni, interventi fatti, correzioni al tuo lavoro. Sono fatti dallo sviluppo
+   e valgono piu' delle tue ipotesi: aggiorna le voci del registro di conseguenza (ipotesi,
+   proposta, gravita', stato, macchine da non segnalare). Se una nota chiede un'azione sul
+   registro (chiudere, cambiare gravita', ignorare una macchina, unire due voci) falla, a
+   meno che i dati di oggi la contraddicano: allora non farla e spiega perche'.
+   Per ogni nota senza risposta (reply null) restituisci una voce in note_replies: 1-3 righe
+   su cosa hai cambiato o cosa non torna con i dati. keep=false se la nota ha esaurito il suo
+   compito (istruzione una tantum gia' applicata, intervento la cui verifica e' conclusa);
+   keep=true se va ancora considerata nei prossimi giorni. Alle note gia' risposte rispondi
+   di nuovo solo se oggi cambia qualcosa (per esempio per archiviarle). Se una nota descrive
+   una regola che vale sempre, suggerisci nella risposta di spostarla nella scheda di conoscenza.
 
 I numeri (stato flotta, versioni, pagamenti, conteggio eventi) li mette gia' lo script nel
 report: non ripeterli. La tua parte del report (markdown) ha solo tre sezioni brevi:
@@ -79,14 +91,25 @@ ISSUE_SCHEMA = {
                  "last_seen", "evidence", "hypothesis", "proposal", "known_issue"],
     "additionalProperties": False,
 }
+NOTE_REPLY_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "id": {"type": "string", "description": "id della nota, N<numero>"},
+        "reply": {"type": "string", "description": "cosa hai fatto con la nota, o cosa non torna"},
+        "keep": {"type": "boolean", "description": "false = nota esaurita, da archiviare"},
+    },
+    "required": ["id", "reply", "keep"],
+    "additionalProperties": False,
+}
 OUTPUT_SCHEMA = {
     "type": "object",
     "properties": {
         "telegram_summary": {"type": "string"},
         "analysis_markdown": {"type": "string"},
         "issue_updates": {"type": "array", "items": ISSUE_SCHEMA},
+        "note_replies": {"type": "array", "items": NOTE_REPLY_SCHEMA},
     },
-    "required": ["telegram_summary", "analysis_markdown", "issue_updates"],
+    "required": ["telegram_summary", "analysis_markdown", "issue_updates", "note_replies"],
     "additionalProperties": False,
 }
 
@@ -195,6 +218,7 @@ def build_context() -> tuple[dict, list[dict]]:
         "config_changes_24h": [{k: str(v) for k, v in c.items()} for c in changes],
         "previous_reports": _load_json(DAILY_LOG, [])[-3:],
         "next_issue_id": f"CG-{(max(nums) if nums else 0) + 1:03d}",
+        "developer_notes": notes.for_prompt(notes.active()),
     }
     return ctx, issues
 
@@ -259,6 +283,9 @@ def notable_reasons(ctx: dict, issues: list[dict]) -> list[str]:
     ev = _count(e["kind"] for e in ctx["events_24h"] if e["kind"] in NOTABLE_EVENTS)
     if ev:
         reasons.append("eventi: " + ", ".join(f"{k} ×{v}" for k, v in ev.items()))
+    fresh = [n for n in ctx["developer_notes"] if not n["reply"]]
+    if fresh:
+        reasons.append(f"{len(fresh)} note nuove di Maurizio")
     if datetime.now(ROME).weekday() == WEEKLY_REVIEW_DAY:
         reasons.append("revisione settimanale")
     return reasons
@@ -278,9 +305,13 @@ def _request_params(ctx: dict, issues: list[dict]) -> dict:
         "messages": [{"role": "user", "content": [
             {"type": "text", "text": "# Registro dei problemi attuale\n\n"
              + json.dumps(issues, ensure_ascii=False, indent=1)},
-            {"type": "text", "text": "# Dati di oggi\n\n" + json.dumps(ctx, ensure_ascii=False, default=str)},
+            {"type": "text", "text": "# Note dello sviluppatore (Maurizio)\n\n"
+             + (json.dumps(ctx["developer_notes"], ensure_ascii=False, indent=1) if ctx["developer_notes"]
+                else "Nessuna nota attiva.")},
+            {"type": "text", "text": "# Dati di oggi\n\n" + json.dumps(
+                {k: v for k, v in ctx.items() if k != "developer_notes"}, ensure_ascii=False, default=str)},
             {"type": "text", "text": "Analizza i dati di oggi: riassunto Telegram, la tua parte del report "
-             "e le sole voci del registro nuove o cambiate."},
+             "le sole voci del registro nuove o cambiate e le risposte alle note."},
         ]}],
     }
 
@@ -332,7 +363,7 @@ def merge_issues(issues: list[dict], updates: list[dict]) -> list[dict]:
     return sorted(by_id.values(), key=lambda i: i["id"])
 
 
-def render_issues_md(issues: list[dict]) -> str:
+def render_issues_md(issues: list[dict], dev_notes: list[dict] = ()) -> str:
     sev = {"high": 0, "medium": 1, "low": 2}
     lines = ["# Registro problemi flotta CGSLIM", "",
              f"Aggiornato dall'agente il {datetime.now(ROME):%d/%m/%Y %H:%M}. "
@@ -355,6 +386,10 @@ def render_issues_md(issues: list[dict]) -> str:
                       f"- **Proposta:** {i['proposal']}"]
             if i.get("known_issue"):
                 lines.append(f"- **Gia' noto:** {i['known_issue']}")
+            for n in dev_notes:
+                if i["id"] in n["issues"]:
+                    lines.append(f"- **Nota {n['id']}** ({n['created'][:10]}): {n['text']}"
+                                 + (f" — _agente: {n['reply']}_" if n.get("reply") else ""))
             lines.append("")
     return "\n".join(lines)
 
@@ -380,10 +415,16 @@ def run(send: bool = True, force: bool = False) -> dict:
     today = datetime.now(ROME).strftime("%Y-%m-%d")
     reasons = notable_reasons(ctx, issues)
 
+    answered = []
     if reasons or force:
         result, usage = analyze(ctx, issues)
         issues = merge_issues(issues, result["issue_updates"])
         analysis, summary = result["analysis_markdown"], result["telegram_summary"]
+        answered = notes.apply_replies(result["note_replies"])
+        if answered:
+            analysis += "\n\n## Risposte alle tue note\n\n" + "\n".join(
+                f"- **{n['id']}**{' (archiviata)' if n['status'] == 'done' else ''} «{n['text']}» → {n['reply']}"
+                for n in answered)
         footer = (f"_Analisi {MODEL} ({usage['mode']}, effort {EFFORT}) per: {'; '.join(reasons) or 'richiesta'}"
                   f" · {len(result['issue_updates'])} voci aggiornate · costo stimato {usage['cost_usd']} $_")
     else:
@@ -401,7 +442,7 @@ def run(send: bool = True, force: bool = False) -> dict:
     cfg.REPORTS_DIR.mkdir(parents=True, exist_ok=True)
     ISSUES_STATE.parent.mkdir(parents=True, exist_ok=True)
     ISSUES_STATE.write_text(json.dumps(issues, ensure_ascii=False, indent=1), encoding="utf-8")
-    ISSUES_MD.write_text(render_issues_md(issues), encoding="utf-8")
+    ISSUES_MD.write_text(render_issues_md(issues, notes.active()), encoding="utf-8")
     (cfg.REPORTS_DIR / f"{today}.md").write_text(report, encoding="utf-8")
     log = _load_json(DAILY_LOG, [])
     log.append({"date": today, "summary": summary, "reasons": reasons, "usage": usage})
@@ -411,7 +452,11 @@ def run(send: bool = True, force: bool = False) -> dict:
         n_open = sum(1 for i in issues if i["status"] == "open")
         notify.email(f"[CGSLIM Flotta] Report {datetime.now(ROME):%d/%m} · {n_open} problemi aperti",
                      report, _html(report))
-        notify.telegram("📋 <b>Report flotta</b>\n" + notify.esc(summary) + "\n\n<i>Dettagli via email</i>")
+        replies = "".join(f"\n• <b>{n['id']}</b>{' 🗄' if n['status'] == 'done' else ''}: {notify.esc(n['reply'])}"
+                          for n in answered)
+        notify.telegram("📋 <b>Report flotta</b>\n" + notify.esc(summary)
+                        + (f"\n\n💬 <b>Le tue note</b>{replies}" if replies else "")
+                        + "\n\n<i>Dettagli via email</i>")
     return usage
 
 

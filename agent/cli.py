@@ -4,14 +4,14 @@
   python -m agent.cli status              stampa i problemi aperti adesso, senza inviare
   python -m agent.cli telegram-chat-id    legge il chat_id dopo /start al bot
   python -m agent.cli daily [--no-send] [--force]  livello 2, report giornaliero con Claude (timer 10:00)
+  python -m agent.cli inbox               messaggi al bot -> note per l'agente (prima di ogni check)
 """
 import argparse
 import json
-import subprocess
 import sys
 import urllib.request
 
-from . import checks, db, notify, state
+from . import checks, db, gitsync, notify, state
 from .config import env
 
 ICON = {"crit": "🔴", "warn": "🟠", "info": "⚪"}
@@ -86,18 +86,21 @@ def cmd_chat_id(args) -> int:
 
 def cmd_daily(args) -> int:
     from . import daily
-    from .config import ROOT
-
     usage = daily.run(send=not args.no_send, force=args.force)
     print(f"report fatto: {usage}")
     # il registro va nel repo: e' cosi' che arriva allo sviluppo. Il server committa
     # solo i dati; il codice arriva dal Mac, quindi rebase sui commit di GitHub
-    git = ["git", "-C", str(ROOT)]
-    subprocess.run(git + ["add", "ISSUES.md", "reports", "data"], check=True)
-    if subprocess.run(git + ["diff", "--cached", "--quiet"]).returncode:
-        subprocess.run(git + ["commit", "-q", "-m", "Report giornaliero e registro problemi"], check=True)
-        subprocess.run(git + ["pull", "-q", "--rebase", "origin", "main"], check=True)
-        subprocess.run(git + ["push", "-q", "origin", "main"], check=True)
+    print("git:", gitsync.commit_and_push(["ISSUES.md", "reports", "data", "notes"],
+                                          "Report giornaliero e registro problemi"))
+    return 0
+
+
+def cmd_inbox(args) -> int:
+    """Messaggi al bot -> note per l'agente (gira prima di ogni check, ogni 15 min)."""
+    from . import notes
+
+    if notes.poll_telegram():
+        print("git:", gitsync.commit_and_push(["notes"], "Note da Telegram"))
     return 0
 
 
@@ -109,6 +112,7 @@ def main() -> int:
     c.set_defaults(fn=cmd_check)
     sub.add_parser("status").set_defaults(fn=cmd_status)
     sub.add_parser("telegram-chat-id").set_defaults(fn=cmd_chat_id)
+    sub.add_parser("inbox").set_defaults(fn=cmd_inbox)
     d = sub.add_parser("daily")
     d.add_argument("--no-send", action="store_true", help="scrive report e registro senza inviarli")
     d.add_argument("--force", action="store_true", help="analisi con Claude anche senza novita'")

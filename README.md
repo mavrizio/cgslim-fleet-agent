@@ -25,6 +25,16 @@ Le macchine con MHD `7788…` e `7777…` (sviluppo/test) sono escluse.
   sui commit del Mac. Prima di modificare il codice sul Mac: `git pull`.
 - `state/` (avvisi aperti, log dei report) resta solo sul server, fuori da git.
 
+## Note per l'agente (spiegazioni, correzioni)
+Le note di Maurizio entrano nel report giornaliero e valgono piu' delle ipotesi di Claude, che
+risponde a ognuna (email + Telegram) e la archivia quando ha finito il suo compito. Una nota = un
+file `notes/N<numero>.json` (`agent/notes.py`).
+- **Telegram**: scrivere al bot. Testo libero = nota; `CG-NNN` e MHD nel testo la collegano; rispondere a
+  un messaggio del bot la collega a quella voce/macchina. `/note`, `/note CG-003`, `/togli 12`, `/aiuto`.
+  Le legge `agent.cli inbox` prima di ogni check (ogni 15 min), poi commit e push delle note.
+- **Mac**: `python3 -m agent.notes add "testo" [--issue CG-003] [--mhd 24350]`, `list`, `done N12`; poi commit e push.
+- Le regole che valgono sempre vanno in `knowledge/KNOWLEDGE.md`, non nelle note.
+
 ## Server di casa (viaggi)
 - `mac-mini-autopoweron.service`: riaccensione automatica dopo un blackout.
 - I controlli ogni 15 min avvisano su Telegram se Tailscale si scollega.

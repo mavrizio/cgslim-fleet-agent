@@ -13,6 +13,10 @@ set -uo pipefail
 ROOT=/opt/cgslim-agent
 BAD_FILE=$ROOT/state/update_bad_commit
 cd "$ROOT" || exit 1
+# stesso lock dei commit di dati del server (agent/gitsync.py): mai due giri sul repo insieme
+mkdir -p "$ROOT/state"
+exec 9>"$ROOT/state/git.lock"
+flock -w 300 9 || exit 0
 
 tg() {  # messaggio Telegram con le credenziali del .env, senza passare dal Python
   local tok chat
