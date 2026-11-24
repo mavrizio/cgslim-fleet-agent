@@ -1,0 +1,15 @@
+{
+ "id": "N1",
+ "created": "2026-11-24T18:02+01:00",
+ "source": "telegram",
+ "issues": [],
+ "machines": [
+  "33957"
+ ],
+ "text": "Sostituito cavo seriale USB non funzionante",
+ "status": "active",
+ "reply": null,
+ "reply_date": null,
+ "closed": null,
+ "closed_by": null
+}
