@@ -1,7 +1,7 @@
 # Conoscenza di base sulla flotta CGSLIM
 
 Scheda per l'analista automatico. Fatti tecnici dallo sviluppo, aggiornati al
-2026-11-01. Quando un dato del giorno combacia con un problema gia' noto, dillo
+2026-11-25. Quando un dato del giorno combacia con un problema gia' noto, dillo
 e collegalo; non presentarlo come scoperta.
 
 ## Il sistema
@@ -87,6 +87,32 @@ quantificare: quante macchine, se impedisce pagamenti.
 La v.172 metteva \u0000 nell'identita' P95 e il fleet scartava i report (fixato
 lato server 0009 e lato Pi .173).
 
+### POS: collegamento col terminale (CG-003, SLIM-4.20.208 del 25/11)
+Provato al banco col SELF2000 vero. Comportamenti del terminale accertati:
+- chiude il TCP da solo 0,1-0,3 s dopo molte risposte: un comando mandato in quella
+  finestra si perdeva (era il motivo per cui la riattivazione dopo il **codice 90**
+  a volte falliva e il cliente prendeva l'errore);
+- dopo un suo riavvio, e dopo la **chiusura di cassa automatica notturna**, riparte
+  **disattivato**: il primo pagamento prende il codice 90 ("il primo fallisce, il
+  secondo va");
+- se la rete cade e il collegamento viene abbandonato a meta', puo' restare in una
+  "sessione fantasma": accetta la connessione ma non risponde piu' a nulla, anche per
+  ore. Serve **spegnere e riaccendere il POS**. Probabile causa dei POS
+  DISCONNECTED che non rientrano (24350, 37008).
+Dalla 208 pos-engine: aspetta 0,8 s dopo ogni risposta, rimanda una volta un comando
+perso prima della presa in carico, rinnova il collegamento dopo 5 min fermo e dopo un
+timeout di get_advanced_config (prima restava una sessione a meta'), **riattiva da solo
+il POS** se e' stato irraggiungibile per 20 s o piu'. Nelle transazioni "POS riattivato
+dopo codice 90" = la riattivazione e' andata, il pagamento e' ripartito: normale.
+Un codice 90 SENZA quella nota con release >= 208 e' da segnalare.
+Campi nuovi nel payload (release >= 208): `status.pos.last_error` = motivo
+dell'ultima disconnessione (es. "nessuna risposta a 'get_advanced_config'",
+"Collegamento interrotto: ...", "Connessione chiusa dal dispositivo." che da sola e'
+normale) e `status.pos.down_s` = da quanti secondi e' scollegato (solo se
+disconnesso). Un down_s che cresce per ore con release >= 208 = POS da spegnere e
+riaccendere (campo/hardware), non piu' un bug del Pi da indagare.
+Le macchine senza IP del POS configurato danno sempre DISCONNECTED: non e' un guasto.
+
 ### POS: altri errori
 Errore 48 = timeout del terminale (anche TID duplicato: successo su 24338 col TID
 di prova 97942487). Errore 01 = annullata. "nessuna carta entro il tempo" e
@@ -100,6 +126,18 @@ corrotto da blackout (repo_healed). Preoccupante solo se persiste giorni.
 ### Schermo fermo su "erogazione" ~90 s (MOD12)
 #RUI non rilasciato; fix nel firmware 4.20.69. Se ricapita con fw >= 4.20.69 e' da
 segnalare.
+
+### Schermata 72 "solo tessere" (MOD12)
+72 = la GMI vende tessere/gettoni ma **non monete**: la tramoggia monete (indirizzo 3,
+primo valore di `runtime.hopper`) non e' disponibile (vuota, assente, in errore, monete
+non pagate rimaste dall'ultima erogazione) oppure VLM impedisce il cambio monete.
+La macchina continua a vendere tessere (contanti/carta), non da' resto in monete.
+70 = tutto disponibile, 71 = solo cambio monete, 73 = solo ricarica.
+Fino al fw 4.20.99, dopo un **inceppamento sbloccato** dalla tramoggia, la GMI restava
+sulla 72 per ~8 s (due giri di controllo) anche con la tramoggia buona: corretto nel
+**fw 4.20.100** (25/11), vale per tutte le modalita'. Quindi una 72 breve dopo un
+errore di erogazione con fw <= 4.20.99 e' quel difetto; una 72 che dura ore o giorni
+(es. CG-014) NON e' quel difetto: tramoggia monete da controllare sul posto.
 
 ### Menu tecnico sordo dopo errore di erogazione
 Fix fw 4.20.84 + SLIM-4.20.176. Errore 101 = erogazione incompleta.
@@ -150,6 +188,22 @@ apriva l'emulatore -> gmi_mute, errore 97, menu 9.5. Dalla 189 l'app sceglie da
 sola l'adattatore giusto (log "Porta seriale GMI: ... uso /dev/ttyUSB1"). Su queste
 macchine con release < 189 e' un problema noto del banco, non della GMI.
 
+### Richiesta #CCI ogni 30 s (SLIM-4.20.207-209) e <TCA=> vuoto su TLK
+Dalla 207 il Pi chiede alla GMI i dispositivi ccTalk (#CCI, sezione cctalk del fleet).
+Per errore, dalla 207 alla 209 la richiesta ripartiva ogni ~30 s invece che solo
+all'accensione della GMI e ogni 30 min; ogni tanto si scontrava con gli invii periodici
+della GMI e su TLK arrivava una risposta vuota `<TCA=>`. Nessun effetto su soldi e
+contatori. Corretto nella **SLIM-4.20.210** (25/11). Con la 210 un #CCI perso viene
+richiesto solo dopo 30 min (nuovo tentativo dopo 60 s nella release successiva):
+la sezione cctalk vuota per meno di mezz'ora dopo un avvio e' normale.
+
+### Comandi delle prove al banco
+#TAP, #POS_SIM, #KEY (tasto SET/SEL simulato, fw >= 4.20.100) e #SCREENSHOT servono
+alle prove al banco (#TAP, #POS_SIM e #KEY solo sulle macchine di sviluppo). Fino alla
+209 le loro risposte finivano nel trace TLK (`<TCA=#TAP-OK ...>`, percorsi delle
+schermate): dalla 209 restano nel log del Pi. Su una macchina di campo non devono
+comparire.
+
 ### Menu tecnico 9.2 (SLIM-4.20.189)
 "Aggiorna software SLIM" mostra le fasi (scarico, controllo, pacchetto) e l'esito;
 un'installazione partita dalla 9.2 e' un version_change voluto dal tecnico.
@@ -175,16 +229,21 @@ nuovo: in quel caso torna da solo al vecchio e non riprova per 24 ore): da segna
 proprietario, non e' un problema della macchina. Un cambio di `host.ips` senza evento
 `pi_ip` invece e' anomalo (SD sostituita o modifica a mano).
 
-## Versioni (2026-11-10)
-- Firmware GMI piu' recente: 4.20.93 (MOD10 tornello), su develop e mod10. 4.20.92 con
-  SLIM-4.20.192 su develop/beta/mod5/mod12 dal 10/11.
-- Pi: SLIM-4.20.196 su develop dal 11/11 (PI_IP con fix POS P95: la 195 riavviava pos-engine dopo il cambio IP e il POS restava in "Timeout locale" fino a spegnerlo). beta (laboratorio/officina) aveva la 195: "Timeout locale" del POS dopo un cambio PI_IP su una beta con 195 = quel bug, non un guasto.
-- Pi: SLIM-4.20.193 su develop e sul canale nuovo mod10 (totem del tornello, ancora
-  nessuna macchina in campo). mod12 (Parma) e mod5: 192.
-- I branch delle macchine in campo (mod12, parma, beta2, mod5) ricevono il codice
-  nuovo solo quando lo sviluppatore fa il merge: una macchina "indietro" su un
-  branch non aggiornato e' normale. E' anomala se il suo repo (git_commit) e'
-  avanti ma la release (app_version) no per piu' di un giorno.
+## Versioni (2026-11-25)
+- **Le versioni vanno confrontate come numeri, non come testo**: dal 25/11 il firmware
+  GMI ha tre cifre nell'ultimo numero, **4.20.100 e' piu' nuova di 4.20.99** (come
+  SLIM-4.20.210 > SLIM-4.20.99). Nel payload e su TLK compare "NCG4.20.100".
+- Firmware GMI piu' recente: **4.20.100** (25/11, tramoggia dopo un inceppamento
+  sbloccato, #KEY), su main e nella SLIM-4.20.209/210.
+- Pi: **SLIM-4.20.210** su develop e **beta** dal 25/11 (208: POS CG-003; 209: GMI
+  4.20.100; 210: fix #CCI). Prima: 207 su beta dal 24/11 con GMI 4.20.99.
+- main (golden), mod5, mod10, mod12: non aggiornati il 24-25/11, il merge lo fa lo
+  sviluppatore quando decide. Una macchina su quei canali ferma a una versione
+  precedente e' normale.
+- I branch delle macchine in campo ricevono il codice nuovo solo quando lo
+  sviluppatore fa il merge: una macchina "indietro" su un branch non aggiornato e'
+  normale. E' anomala se il suo repo (git_commit) e' avanti ma la release
+  (app_version) no per piu' di un giorno.
 
 ## Chi fa cosa (per assegnare i problemi)
 - **firmware**: GMI (STM32), bootloader, protocollo seriale lato GMI.
