@@ -8,8 +8,8 @@
  ],
  "text": "Sostituito cavo seriale USB non funzionante",
  "status": "active",
- "reply": null,
- "reply_date": null,
+ "reply": "Collegata a CG-032. I dati la confermano: seriale persa dalle 13:45 alle 14:44 del 24/11, poi test 8.4 OK alle 14:48 col cavo BG04MVH4 e vendite fino alle 18:19. Stamattina alle 10 pero' la 33957 non si e' accesa, quindi tengo la nota per la verifica. Qual era il seriale del cavo tolto? E' cambiata anche la GMI (stm32 rev 0x101F)?",
+ "reply_date": "2026-11-25",
  "closed": null,
  "closed_by": null
 }
