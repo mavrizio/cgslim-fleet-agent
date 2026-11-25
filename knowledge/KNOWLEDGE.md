@@ -75,6 +75,11 @@ MAX232 che carica i segnali), le GMI rosse no; byte spurio che sfasa i pacchetti
 tentativi poi errore 98 (usura flash). "RILEVATO LOOP BOOTLOADER (RDY)" = la GMI
 e' rimasta nel bootloader (app non valida) e manda RDY in continuo.
 La sottotensione del Pi durante il flash e' un sospetto ragionevole.
+Dalla **SLIM-4.20.211** (CG-024) ogni flash fallito manda `gmi_flash_attempt_failed`
+(`attempt` 0 = aggiornamento normale, 1..15 = recovery; `addr` = indirizzo in flash dove
+si e' fermato, da 0x08008000; `error`), e `gmi_flash_failed` ha `fail_addrs` con
+l'indirizzo di ogni tentativo. Stesso indirizzo a ogni tentativo = settore della flash
+della GMI; indirizzi diversi = linea seriale disturbata.
 
 ### POS: get_advanced_config
 Dalla SLIM-4.20.171/172 `core/cashless_info.py` legge get_advanced_config,
@@ -158,6 +163,15 @@ la GMI chiude banconote, gettoniera e cashless (in tutte le modalita') e li riap
 gmi_hostlink {"locked": true/false} solo al cambio: un locked=true seguito presto da
 false = Pi bloccato o seriale persa per qualche secondo, e' la protezione che funziona.
 Ripetuto spesso = main loop del Pi bloccato o seriale instabile (vedi fe/serial).
+Dalla **SLIM-4.20.211** l'evento dice la causa probabile (CG-022): al blocco
+`cause` = `avvio_app` (app appena partita: Pi acceso o app riavviata, normale alle
+accensioni), `avvio_gmi` (la GMI e' appena ripartita e parte bloccata: un avvio_gmi a
+meta' giornata senza reboot del Pi = la GMI si e' riavviata da sola o ha perso
+alimentazione), `pi_fermo` (il Pi non ha scritto alla GMI per >= 15 s: main loop
+bloccato), `linea` (il Pi scriveva ma la GMI non lo sentiva: cavo, masse, disturbi).
+Campi: `pi_tx_gap_s`, `gmi_silence_s` (silenzio misurato dalla GMI), `gmi_boot_ago_s`,
+`last_rx` (ultima riga dalla GMI). Allo sblocco `duration_s`. Prima della 211 l'evento ha
+solo `locked`.
 Sul display 16x2 della GMI compare "PI MUTO". Dal fw 4.20.87 quel display e' tecnico
 (fase GMI, credito, B M C): non e' piu' rivolto al pubblico, non e' un guasto.
 
@@ -194,8 +208,7 @@ Per errore, dalla 207 alla 209 la richiesta ripartiva ogni ~30 s invece che solo
 all'accensione della GMI e ogni 30 min; ogni tanto si scontrava con gli invii periodici
 della GMI e su TLK arrivava una risposta vuota `<TCA=>`. Nessun effetto su soldi e
 contatori. Corretto nella **SLIM-4.20.210** (25/11). Con la 210 un #CCI perso viene
-richiesto solo dopo 30 min (nuovo tentativo dopo 60 s nella release successiva):
-la sezione cctalk vuota per meno di mezz'ora dopo un avvio e' normale.
+richiesto solo dopo 30 min; dalla 211 si riprova dopo 60 s.
 
 ### Comandi delle prove al banco
 #TAP, #POS_SIM, #KEY (tasto SET/SEL simulato, fw >= 4.20.100) e #SCREENSHOT servono
@@ -235,8 +248,9 @@ proprietario, non e' un problema della macchina. Un cambio di `host.ips` senza e
   SLIM-4.20.210 > SLIM-4.20.99). Nel payload e su TLK compare "NCG4.20.100".
 - Firmware GMI piu' recente: **4.20.100** (25/11, tramoggia dopo un inceppamento
   sbloccato, #KEY), su main e nella SLIM-4.20.209/210.
-- Pi: **SLIM-4.20.210** su develop e **beta** dal 25/11 (208: POS CG-003; 209: GMI
-  4.20.100; 210: fix #CCI). Prima: 207 su beta dal 24/11 con GMI 4.20.99.
+- Pi: **SLIM-4.20.211** su develop e **beta** dal 25/11 sera (208: POS CG-003; 209: GMI
+  4.20.100; 210: fix #CCI; 211: gmi_hostlink con causa e durata, punto di rottura del
+  flash GMI, nuovo tentativo #CCI dopo 60 s). Prima: 207 su beta dal 24/11 con GMI 4.20.99.
 - main (golden), mod5, mod10, mod12: non aggiornati il 24-25/11, il merge lo fa lo
   sviluppatore quando decide. Una macchina su quei canali ferma a una versione
   precedente e' normale.
