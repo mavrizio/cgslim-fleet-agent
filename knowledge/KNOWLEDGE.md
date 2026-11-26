@@ -118,6 +118,24 @@ disconnesso). Un down_s che cresce per ore con release >= 208 = POS da spegnere 
 riaccendere (campo/hardware), non piu' un bug del Pi da indagare.
 Le macchine senza IP del POS configurato danno sempre DISCONNECTED: non e' un guasto.
 
+### Credito sbagliato dalla GMI: money_mismatch (GMI 4.20.101 + SLIM-4.20.212, 26/11)
+Caso reale: **33089, 21/11 18:39**. Bancomat 10 € per una ricarica tessera MOD12; la GMI ha
+accreditato **100,07 €** e caricato 100 € sullo SPARK (5 tagli da 20). Causa: sulla seriale si
+e' perso l'asterisco del checksum (`#SQ55134#AMc 1000*7A` letto `#AMc 10007A`) e il firmware
+<= 4.20.100 eseguiva la riga senza controllo. Nel registro si vede come pagamento carta con
+consegnato > pagato piu' una riga `card_mdb` con `extra.source = "gmi"` su una macchina senza
+MDB. Esposti: ricarica MOD12 con carta, gettoni MOD5 con POS (chl 4), tornello, POS generico;
+non la tessera nuova (#VN2) ne' il Saltarello.
+- Dalla **GMI 4.20.101** la riga firmata senza checksum viene rifiutata (`#TRC8 CRC mancante`,
+  `#ERR-CRC`) e il Pi la rimanda: piu' righe `#ERR-CRC` su una macchina = linea disturbata,
+  ma senza danni economici.
+- Dalla **SLIM-4.20.212** l'evento **`money_mismatch`** {approved, gmi, seq, trx} segnala un
+  credito della GMI diverso dal pagamento approvato (o un credito senza pagamento dopo 15 s), e la
+  riga del pagamento ha `extra.credit_mismatch`. E' SEMPRE da segnalare subito, gravita' alta:
+  possibile denaro caricato senza pagamento.
+- Una riga `card_mdb` con `source: gmi` su una macchina con chl_mode 3/4 (POS, senza MDB) e'
+  sospetta allo stesso modo, anche prima della 212.
+
 ### POS: altri errori
 Errore 48 = timeout del terminale (anche TID duplicato: successo su 24338 col TID
 di prova 97942487). Errore 01 = annullata. "nessuna carta entro il tempo" e
@@ -246,9 +264,11 @@ proprietario, non e' un problema della macchina. Un cambio di `host.ips` senza e
 - **Le versioni vanno confrontate come numeri, non come testo**: dal 25/11 il firmware
   GMI ha tre cifre nell'ultimo numero, **4.20.100 e' piu' nuova di 4.20.99** (come
   SLIM-4.20.210 > SLIM-4.20.99). Nel payload e su TLK compare "NCG4.20.100".
-- Firmware GMI piu' recente: **4.20.100** (25/11, tramoggia dopo un inceppamento
-  sbloccato, #KEY), su main e nella SLIM-4.20.209/210.
-- Pi: **SLIM-4.20.211** su develop e **beta** dal 25/11 sera (208: POS CG-003; 209: GMI
+- Firmware GMI piu' recente: **4.20.101** (26/11, comandi di denaro senza checksum
+  rifiutati, vedi money_mismatch), su main e nella SLIM-4.20.212. 4.20.100 (25/11, tramoggia
+  dopo un inceppamento sbloccato) nelle 209-211.
+- Pi: **SLIM-4.20.212** su develop e **beta** dal 26/11 (GMI 4.20.101, money_mismatch);
+  la 33089 portata su beta il 26/11 per riceverla. Prima: SLIM-4.20.211 su develop e beta dal 25/11 sera (208: POS CG-003; 209: GMI
   4.20.100; 210: fix #CCI; 211: gmi_hostlink con causa e durata, punto di rottura del
   flash GMI, nuovo tentativo #CCI dopo 60 s). Prima: 207 su beta dal 24/11 con GMI 4.20.99.
 - main (golden), mod5, mod10, mod12: non aggiornati il 24-25/11, il merge lo fa lo
