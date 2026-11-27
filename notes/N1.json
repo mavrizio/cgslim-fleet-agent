@@ -7,9 +7,9 @@
   "33957"
  ],
  "text": "Sostituito cavo seriale USB non funzionante",
- "status": "active",
- "reply": "Aggiornata CG-032: dopo il cambio cavo la 33957 non si e' piu' accesa (ultimo report 24/11 20:19, seconda mattina spenta). Nei dati c'e' un provisioning GIT_BRANCH in attesa dal 25/11 15:23 che partira' alla riaccensione. Tengo la nota fino alla prima accensione con seriale stabile.",
- "reply_date": "2026-11-26",
- "closed": null,
- "closed_by": null
+ "status": "done",
+ "reply": "Verifica conclusa. Dal cambio cavo la seriale e' stabile: alle 09:00 di oggi accensione senza serial_missing, fe 5, ne 1, cavo BG04MVH4.\nLa 33957 e' rientrata il 26/11 alle 14:27 (probabile SD nuova), ora su beta 212/4.20.101 con 18 vendite su 19.\nCG-032 passa in monitoring; la nota si puo' archiviare.",
+ "reply_date": "2026-11-27",
+ "closed": "2026-11-27T10:03+01:00",
+ "closed_by": "agente"
 }
